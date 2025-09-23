@@ -5,11 +5,11 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 
 @Controller('property')
 export class PropertyController {
-  constructor(private readonly propertyService: PropertyService) {}
+  constructor(private readonly propertyService: PropertyService) { }
 
   @Post()
-  create(@Body() createPropertyDto: CreatePropertyDto) {
-    return this.propertyService.create(createPropertyDto);
+  create(@Body() data: CreatePropertyDto) {
+    return this.propertyService.create(data);
   }
 
   @Get()
@@ -17,18 +17,18 @@ export class PropertyController {
     return this.propertyService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.propertyService.findOne(+id);
+  @Get(':nome')
+  findOne(@Param('nome') nome: string) {
+    return this.propertyService.findOne(nome);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePropertyDto: UpdatePropertyDto) {
-    return this.propertyService.update(+id, updatePropertyDto);
+  @Patch(':nome')
+  update(@Param('nome') nome: string, @Body() updatePropertyDto: UpdatePropertyDto) {
+    return this.propertyService.update(nome, updatePropertyDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.propertyService.remove(+id);
+  @Delete(':nome')
+  remove(@Param('nome') nome: string) {
+    return this.propertyService.remove(nome);
   }
 }

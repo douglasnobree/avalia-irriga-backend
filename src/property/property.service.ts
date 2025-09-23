@@ -9,48 +9,51 @@ export class PropertyService {
   constructor(private prisma: PrismaService) { }
 
   async create(data: CreatePropertyDto) {
-    const property = await this.prisma.property.create({ data: data });
-    return property;
-  }
-
-  async findAll() {
-    const property = await this.prisma.property.findMany();
-    return property;
-  }
-
-  async findOne(id: number) {
-    const property = await this.prisma.property.findUnique({
-      where: { id: id },
+    const property = await this.prisma.propriedade.create({
+      data
     });
     return property;
   }
 
-  async update(id: number, updatePropertyDto: UpdatePropertyDto) {
-    const property = await this.prisma.property.findUnique({
-      where: { id: id },
+  async findAll() {
+    const property = await this.prisma.propriedade.findMany();
+    return property;
+  }
+
+  async findOne(nome: string) {
+    const property = await this.prisma.propriedade.findUnique({
+      where: { nome: nome },
+    });
+    return property;
+  }
+
+  async update(nome: string, updatePropertyDto: UpdatePropertyDto) {
+    const property = await this.prisma.propriedade.findUnique({
+      where: { nome: nome },
     })
 
     if (!property) {
       throw new Error('Propriedade não encontrada');
     }
 
-    return this.prisma.property.update({
-      where: { id: id },
-      data: updatePropertyDto,
+    const { userId, ...updateData } = updatePropertyDto;
+    return this.prisma.propriedade.update({
+      where: { nome: nome },
+      data: updateData,
     });
   }
 
-  async remove(id: number) {
-    const property = await this.prisma.property.findUnique({
-      where: { id: id },
+  async remove(nome: string) {
+    const property = await this.prisma.propriedade.findUnique({
+      where: { nome: nome },
     });
 
     if (!property) {
       throw new Error('Propriedade não encontrada');
     }
 
-    return this.prisma.property.delete({
-      where: { id: id },
+    return this.prisma.propriedade.delete({
+      where: { nome: nome },
     });
   }
 }

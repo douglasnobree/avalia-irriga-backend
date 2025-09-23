@@ -9,6 +9,6 @@ export class CreatePropertyDto {
     longitude: number;
     area_total: number;
     area_irrigada: number;
-    observacoes?: string;
-    UserId: number;
+    observacoes: string;
+    userId: string;
 }
