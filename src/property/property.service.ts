@@ -20,16 +20,16 @@ export class PropertyService {
     return property;
   }
 
-  async findOne(nome: string) {
+  async findOne(id: string) {
     const property = await this.prisma.propriedade.findUnique({
-      where: { nome: nome },
+      where: { id: id },
     });
     return property;
   }
 
-  async update(nome: string, updatePropertyDto: UpdatePropertyDto) {
+  async update(id: string, updatePropertyDto: UpdatePropertyDto) {
     const property = await this.prisma.propriedade.findUnique({
-      where: { nome: nome },
+      where: { id: id },
     })
 
     if (!property) {
@@ -38,14 +38,14 @@ export class PropertyService {
 
     const { userId, ...updateData } = updatePropertyDto;
     return this.prisma.propriedade.update({
-      where: { nome: nome },
+      where: { id: id },
       data: updateData,
     });
   }
 
-  async remove(nome: string) {
+  async remove(id: string) {
     const property = await this.prisma.propriedade.findUnique({
-      where: { nome: nome },
+      where: { id: id },
     });
 
     if (!property) {
@@ -53,7 +53,7 @@ export class PropertyService {
     }
 
     return this.prisma.propriedade.delete({
-      where: { nome: nome },
+      where: { id: id },
     });
   }
 }

@@ -1,4 +1,5 @@
 export class CreatePropertyDto {
+    id: string;
     nome: string;
     proprietario: string;
     telefone: string;

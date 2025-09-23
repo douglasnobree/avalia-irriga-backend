@@ -43,7 +43,8 @@ model Account {
 }
 
 model Propriedade {
-  nome             String             @unique
+  id               String             @id @unique @default(uuid())
+  nome             String
   proprietario     String
   telefone         String
   email            String
@@ -65,7 +66,7 @@ model Unidade_avaliada {
   area_ha        Float
   propriedade_id String
   avaliacoes     Avaliacao[]
-  propiedade     Propriedade @relation(fields: [propriedade_id], references: [nome], onDelete: Cascade)
+  propiedade     Propriedade @relation(fields: [propriedade_id], references: [id], onDelete: Cascade)
 }
 
 model Avaliacao {

@@ -17,9 +17,9 @@ export class PropertyController {
     return this.propertyService.findAll();
   }
 
-  @Get(':nome')
-  findOne(@Param('nome') nome: string) {
-    return this.propertyService.findOne(nome);
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.propertyService.findOne(id);
   }
 
   @Patch(':nome')
