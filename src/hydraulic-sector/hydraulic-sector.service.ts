@@ -1,0 +1,57 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../infra/prisma/prisma.service';
+import { CreateHydraulicSectorDto } from './dto/create-hydraulic-sector.dto';
+import { UpdateHydraulicSectorDto } from './dto/update-hydraulic-sector.dto';
+
+@Injectable()
+export class HydraulicSectorService {
+  constructor(private prisma: PrismaService) {}
+
+  async create(data: CreateHydraulicSectorDto) {
+    const hydraulicSector = await this.prisma.setor_Hidraulico.create({
+      data
+    });
+    return hydraulicSector;
+  }
+
+  async findAll() {
+    const hydraulicSectors = await this.prisma.setor_Hidraulico.findMany();
+    return hydraulicSectors;
+  }
+
+  async findOne(id: string) {
+    const hydraulicSector = await this.prisma.setor_Hidraulico.findUnique({
+      where: { id },
+    });
+    return hydraulicSector;
+  }
+
+  async update(id: string, updateHydraulicSectorDto: UpdateHydraulicSectorDto) {
+    const hydraulicSector = await this.prisma.setor_Hidraulico.findUnique({
+      where: { id },
+    });
+
+    if (!hydraulicSector) {
+      throw new Error('Setor hidráulico não encontrado');
+    }
+
+    return this.prisma.setor_Hidraulico.update({
+      where: { id },
+      data: updateHydraulicSectorDto,
+    });
+  }
+
+  async remove(id: string) {
+    const hydraulicSector = await this.prisma.setor_Hidraulico.findUnique({
+      where: { id },
+    });
+
+    if (!hydraulicSector) {
+      throw new Error('Setor hidráulico não encontrado');
+    }
+
+    return this.prisma.setor_Hidraulico.delete({
+      where: { id },
+    });
+  }
+}
