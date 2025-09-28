@@ -9,7 +9,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { Roles } from './auth/roles.decorator';
 import { User } from './auth/user.decorator';
-import { UserRole } from 'prisma/generated/prisma';
+import { UserRole } from '@prisma/client';
 
 @Controller('protected')
 @UseGuards(JwtAuthGuard, RolesGuard)
