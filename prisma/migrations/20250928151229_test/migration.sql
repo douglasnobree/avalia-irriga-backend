@@ -6,16 +6,16 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `unidade_avaliada` DROP FOREIGN KEY `Unidade_avaliada_propriedade_id_fkey`;
+ALTER TABLE `Unidade_avaliada` DROP FOREIGN KEY `Unidade_avaliada_propriedade_id_fkey`;
 
 -- DropIndex
-DROP INDEX `Propriedade_nome_key` ON `propriedade`;
+DROP INDEX `Propriedade_nome_key` ON `Propriedade`;
 
 -- DropIndex
-DROP INDEX `Unidade_avaliada_propriedade_id_fkey` ON `unidade_avaliada`;
+DROP INDEX `Unidade_avaliada_propriedade_id_fkey` ON `Unidade_avaliada`;
 
 -- AlterTable
-ALTER TABLE `propriedade` ADD COLUMN `id` VARCHAR(191) NOT NULL,
+ALTER TABLE `Propriedade` ADD COLUMN `id` VARCHAR(191) NOT NULL,
     ADD PRIMARY KEY (`id`);
 
 -- CreateIndex
