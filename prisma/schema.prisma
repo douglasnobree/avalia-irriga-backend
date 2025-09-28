@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,38 +8,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Avaliador {
-  id            String        @id @default(uuid())
-  name          String?
-  email         String        @unique
-  emailVerified DateTime?
-  password      String
-  image         String?
-  role          UserRole      @default(USER)
-  refreshToken  String?       @db.Text
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  accounts      Account[]
-  Propriedade   Propriedade[]
-}
-
 model Account {
-  id                String    @id @default(uuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              Avaliador @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String    @id
+  accountId             String    @db.Text
+  providerId            String    @db.Text
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  @@unique([provider, providerAccountId])
-  @@index([userId])
+  @@map("account")
 }
 
 model Propriedade {
@@ -55,7 +41,7 @@ model Propriedade {
   area_irrigada    Float
   observacoes      String
   userId           String
-  user             Avaliador          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   Unidade_avaliada Unidade_avaliada[]
 }
 
@@ -177,6 +163,59 @@ model Pivo_Central {
   avaliacoes             Avaliacao[]
 }
 
+model User {
+  id            String        @id
+  name          String        @db.Text
+  email         String
+  emailVerified Boolean       @default(false)
+  image         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now()) @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  Propriedade   Propriedade[]
+
+  role String? @db.Text
+
+  banned      Boolean?     @default(false)
+  banReason   String?      @db.Text
+  banExpires  DateTime?
+  members     Member[]
+  invitations Invitation[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?  @db.Text
+  userAgent String?  @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  impersonatedBy       String? @db.Text
+  activeOrganizationId String? @db.Text
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Verification {
+  id         String   @id
+  identifier String   @db.Text
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -195,4 +234,44 @@ enum EmissorType {
 enum UnitModel {
   SETOR_HIDRAULICO
   PIVO_CENTRAL
+}
+
+model Organization {
+  id          String       @id
+  name        String       @db.Text
+  slug        String?
+  logo        String?      @db.Text
+  createdAt   DateTime
+  metadata    String?      @db.Text
+  members     Member[]
+  invitations Invitation[]
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @db.Text
+  createdAt      DateTime
+
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String       @db.Text
+  role           String?      @db.Text
+  status         String       @db.Text
+  expiresAt      DateTime
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@map("invitation")
 }
