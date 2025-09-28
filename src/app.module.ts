@@ -4,9 +4,10 @@ import { LoggerService } from './infra/logger/logger.service';
 import { AuthModule } from './auth/auth.module';
 import { ProtectedController } from './protected.controller';
 import { PropertyModule } from './property/property.module';
+import { HydraulicSectorModule } from './hydraulic-sector/hydraulic-sector.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, PropertyModule],
+  imports: [PrismaModule, AuthModule, PropertyModule, HydraulicSectorModule],
   controllers: [ProtectedController],
   providers: [LoggerService],
   exports: [LoggerService], // Exportar para ser usado em outros módulos

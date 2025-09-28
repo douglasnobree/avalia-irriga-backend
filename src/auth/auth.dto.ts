@@ -6,7 +6,7 @@ import {
   IsOptional,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '@prisma/client';
+import { UserRole } from 'prisma/generated/prisma';
 
 export class LoginDto {
   @ApiProperty({
