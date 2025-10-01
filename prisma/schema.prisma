@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -39,9 +38,11 @@ model Propriedade {
   longitude        Float
   area_total       Float
   area_irrigada    Float
-  observacoes      String
+  observacoes      String?
   userId           String
+  organizationId   String
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   Unidade_avaliada Unidade_avaliada[]
 }
 
@@ -239,14 +240,15 @@ enum UnitModel {
 }
 
 model Organization {
-  id          String       @id
-  name        String       @db.Text
-  slug        String?
-  logo        String?      @db.Text
-  createdAt   DateTime
-  metadata    String?      @db.Text
-  members     Member[]
-  invitations Invitation[]
+  id           String        @id
+  name         String        @db.Text
+  slug         String?
+  logo         String?       @db.Text
+  createdAt    DateTime
+  metadata     String?       @db.Text
+  members      Member[]
+  invitations  Invitation[]
+  propriedades Propriedade[]
 
   @@unique([slug])
   @@map("organization")

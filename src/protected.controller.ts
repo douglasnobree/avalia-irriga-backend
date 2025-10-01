@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -13,12 +13,14 @@ import {
 } from '@thallesp/nestjs-better-auth';
 import { Roles } from './common/decorators/roles.decorator';
 import { RolesGuard } from './common/guards/roles.guard';
+import { PrismaService } from './infra/prisma/prisma.service';
 
 @Controller('protected')
 @UseGuards(AuthGuard, RolesGuard)
 @ApiTags('Rotas Protegidas')
 @ApiBearerAuth()
 export class ProtectedController {
+  constructor(private readonly prisma: PrismaService) {}
   @Get('user')
   @ApiOperation({
     summary: 'Obter perfil do usuário',
@@ -131,6 +133,239 @@ export class ProtectedController {
     return {
       message: 'Dados de administrador de fazenda',
       user: session.user,
+    };
+  }
+
+  @Get('active-organization')
+  @Roles(
+    UserRole.USER,
+    UserRole.ADMIN,
+    UserRole.ADMIN_FAZENDA,
+    UserRole.AVALIADOR,
+  )
+  @ApiOperation({
+    summary: 'Obter organização ativa',
+    description: 'Retorna a organização atualmente ativa para o usuário',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Organização ativa retornada com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        activeOrganization: {
+          type: 'object',
+          nullable: true,
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            slug: { type: 'string', nullable: true },
+            logo: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido ou expirado',
+  })
+  async getActiveOrganization(@Session() session: any) {
+    const sessionData = await this.prisma.session.findUnique({
+      where: { id: session.id },
+      select: { activeOrganizationId: true },
+    });
+
+    if (!sessionData?.activeOrganizationId) {
+      return {
+        activeOrganization: null,
+      };
+    }
+
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: sessionData.activeOrganizationId },
+    });
+
+    return {
+      activeOrganization: organization,
+    };
+  }
+
+  @Post('set-active-organization')
+  @Roles(
+    UserRole.USER,
+    UserRole.ADMIN,
+    UserRole.ADMIN_FAZENDA,
+    UserRole.AVALIADOR,
+  )
+  @ApiOperation({
+    summary: 'Definir organização ativa',
+    description:
+      'Define uma organização como ativa para a sessão atual do usuário. Use organizationId: null para desativar a organização ativa.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Organização ativa definida com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string' },
+        activeOrganizationId: { type: 'string', nullable: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Organização não encontrada ou usuário não é membro',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido ou expirado',
+  })
+  async setActiveOrganization(
+    @Session() session: any,
+    @Body() body: { organizationId?: string | null; organizationSlug?: string },
+  ) {
+    const userId = session.user.id;
+
+    // Permite desativar a organização ativa
+    if (body.organizationId === null) {
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: { activeOrganizationId: null },
+      });
+
+      return {
+        success: true,
+        message: 'Organização ativa removida com sucesso',
+        activeOrganizationId: null,
+      };
+    }
+
+    let organizationId = body.organizationId;
+
+    // Se foi fornecido slug em vez de ID, busca pelo slug
+    if (!organizationId && body.organizationSlug) {
+      const org = await this.prisma.organization.findUnique({
+        where: { slug: body.organizationSlug },
+      });
+
+      if (!org) {
+        return {
+          success: false,
+          message: 'Organização não encontrada',
+        };
+      }
+
+      organizationId = org.id;
+    }
+
+    if (!organizationId) {
+      return {
+        success: false,
+        message: 'organizationId ou organizationSlug é obrigatório',
+      };
+    }
+
+    // Verifica se o usuário é membro da organização
+    const member = await this.prisma.member.findFirst({
+      where: {
+        userId,
+        organizationId,
+      },
+    });
+
+    if (!member) {
+      return {
+        success: false,
+        message: 'Você não é membro desta organização',
+      };
+    }
+
+    // Atualiza a sessão com a organização ativa
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: { activeOrganizationId: organizationId },
+    });
+
+    return {
+      success: true,
+      message: 'Organização ativa definida com sucesso',
+      activeOrganizationId: organizationId,
+    };
+  }
+
+  @Get('my-organizations')
+  @Roles(
+    UserRole.USER,
+    UserRole.ADMIN,
+    UserRole.ADMIN_FAZENDA,
+    UserRole.AVALIADOR,
+  )
+  @ApiOperation({
+    summary: 'Listar minhas organizações',
+    description: 'Retorna todas as organizações das quais o usuário é membro',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de organizações retornada com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        organizations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              slug: { type: 'string', nullable: true },
+              logo: { type: 'string', nullable: true },
+              role: { type: 'string' },
+              isActive: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido ou expirado',
+  })
+  async getMyOrganizations(@Session() session: any) {
+    const userId = session.user.id;
+
+    // Busca a sessão atual para saber qual organização está ativa
+    const sessionData = await this.prisma.session.findUnique({
+      where: { id: session.id },
+      select: { activeOrganizationId: true },
+    });
+
+    // Busca todas as organizações do usuário
+    const memberships = await this.prisma.member.findMany({
+      where: { userId },
+      include: {
+        organization: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    const organizations = memberships.map((membership) => ({
+      id: membership.organization.id,
+      name: membership.organization.name,
+      slug: membership.organization.slug,
+      logo: membership.organization.logo,
+      role: membership.role,
+      isActive: membership.organizationId === sessionData?.activeOrganizationId,
+    }));
+
+    return {
+      organizations,
     };
   }
 }

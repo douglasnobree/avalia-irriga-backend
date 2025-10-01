@@ -1,11 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { PropertyService } from './property.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { RolesGuard } from 'src/common';
 
 @Controller('property')
+@UseGuards(AuthGuard)
 export class PropertyController {
-  constructor(private readonly propertyService: PropertyService) { }
+  constructor(private readonly propertyService: PropertyService) {}
 
   @Post()
   create(@Body() data: CreatePropertyDto) {
@@ -22,8 +34,16 @@ export class PropertyController {
     return this.propertyService.findOne(id);
   }
 
+  @Get('organization/:organizationId')
+  findByOrganization(@Param('organizationId') organizationId: string) {
+    return this.propertyService.findByOrganization(organizationId);
+  }
+
   @Patch(':nome')
-  update(@Param('nome') nome: string, @Body() updatePropertyDto: UpdatePropertyDto) {
+  update(
+    @Param('nome') nome: string,
+    @Body() updatePropertyDto: UpdatePropertyDto,
+  ) {
     return this.propertyService.update(nome, updatePropertyDto);
   }
 

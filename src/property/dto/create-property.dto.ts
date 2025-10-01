@@ -1,15 +1,57 @@
+import {
+  IsString,
+  IsNumber,
+  IsNotEmpty,
+  IsEmail,
+  IsOptional,
+} from 'class-validator';
+
 export class CreatePropertyDto {
-    id: string;
-    nome: string;
-    proprietario: string;
-    telefone: string;
-    email: string;
-    municipio: string;
-    estado: string;
-    latitude: number;
-    longitude: number;
-    area_total: number;
-    area_irrigada: number;
-    observacoes: string;
-    userId: string;
+  @IsString()
+  @IsNotEmpty()
+  nome: string;
+
+  @IsString()
+  @IsNotEmpty()
+  proprietario: string;
+
+  @IsString()
+  @IsNotEmpty()
+  telefone: string;
+
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  municipio: string;
+
+  @IsString()
+  @IsNotEmpty()
+  estado: string;
+
+  @IsNumber()
+  latitude: number;
+
+  @IsNumber()
+  longitude: number;
+
+  @IsNumber()
+  area_total: number;
+
+  @IsNumber()
+  area_irrigada: number;
+
+  @IsString()
+  @IsOptional()
+  observacoes?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  userId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  organizationId: string;
 }

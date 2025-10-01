@@ -5,32 +5,69 @@ import { PrismaService } from 'src/infra/prisma/prisma.service';
 
 @Injectable()
 export class PropertyService {
-
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async create(data: CreatePropertyDto) {
     const property = await this.prisma.propriedade.create({
-      data
+      data,
     });
     return property;
   }
 
   async findAll() {
-    const property = await this.prisma.propriedade.findMany();
+    const property = await this.prisma.propriedade.findMany({
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+          },
+        },
+      },
+    });
     return property;
   }
 
   async findOne(id: string) {
     const property = await this.prisma.propriedade.findUnique({
       where: { id: id },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+          },
+        },
+      },
     });
     return property;
+  }
+
+  async findByOrganization(organizationId: string) {
+    const properties = await this.prisma.propriedade.findMany({
+      where: { organizationId },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+          },
+        },
+      },
+    });
+    return properties;
   }
 
   async update(id: string, updatePropertyDto: UpdatePropertyDto) {
     const property = await this.prisma.propriedade.findUnique({
       where: { id: id },
-    })
+    });
 
     if (!property) {
       throw new Error('Propriedade não encontrada');

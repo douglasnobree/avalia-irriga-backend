@@ -2,20 +2,28 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { PrismaClient } from '@prisma/client';
 import { role } from 'better-auth/plugins';
-import { openAPI, admin, organization  } from "better-auth/plugins"
+import { openAPI, admin, organization } from 'better-auth/plugins';
 import { EmailService } from '../infra/email/email.service';
-
 
 const prisma = new PrismaClient();
 const emailService = new EmailService();
 
 export const auth: any = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3333',
-  trustedOrigins: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3333'],
+  trustedOrigins: [
+    'http://localhost:3001',
+    'http://localhost:3000',
+    'http://localhost:3333',
+  ],
   plugins: [
     openAPI(),
     admin(),
-    organization(),
+    organization({
+      async allowUserToCreateOrganization(user) {
+        // Permite que qualquer usuário crie uma organização
+        return true;
+      },
+    }),
   ],
   database: prismaAdapter(prisma, {
     provider: 'mysql',
@@ -33,12 +41,43 @@ export const auth: any = betterAuth({
       await emailService.sendVerificationEmail(user.email, url, token);
     },
   },
-  socialProviders:{
-    google:{
+  socialProviders: {
+    google: {
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      prompt: 'select_account'
-    }
+      prompt: 'select_account',
+    },
+  },
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session) => {
+          const member = await prisma.member.findFirst({
+            where: { userId: session.userId },
+            include: {
+              organization: {
+                include: {
+                  propriedades: true,
+                  members: true,
+                },
+              },
+            },
+          });
+
+          if (member) {
+            return {
+              data: {
+                ...session,
+                activeOrganizationId: member.organizationId,
+                organization: member.organization, // já retorna tudo do Prisma
+              },
+            };
+          }
+
+          return { data: session };
+        },
+      },
+    },
   },
   user: {
     additionalFields: {
@@ -47,6 +86,24 @@ export const auth: any = betterAuth({
         input: false,
         defaultValue: 'USER',
       },
+    },
+    transform: async (user) => {
+      const member = await prisma.member.findFirst({
+        where: { userId: user.id },
+        include: {
+          organization: {
+            include: {
+              propriedades: true,
+              members: true,
+            },
+          },
+        },
+      });
+
+      return {
+        ...user,
+        organizations: member ? [member.organization] : [],
+      };
     },
   },
 });
