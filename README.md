@@ -25,6 +25,25 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## 📧 Email Configuration
+
+This project uses **Nodemailer** for sending authentication emails (verification, password reset). 
+
+**Quick Setup:**
+1. Copy `.env.example` to `.env`
+2. Configure SMTP settings (Gmail, SendGrid, etc.)
+3. For detailed instructions, see [EMAIL_SETUP.md](./EMAIL_SETUP.md)
+
+**Required Environment Variables:**
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+📖 **Full guide:** [EMAIL_SETUP.md](./EMAIL_SETUP.md)
+
 ## Project setup
 
 ```bash
