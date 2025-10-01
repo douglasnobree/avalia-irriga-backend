@@ -10,7 +10,8 @@ const prisma = new PrismaClient();
 const emailService = new EmailService();
 
 export const auth: any = betterAuth({
-  trustedOrigins: ['http://localhost:3001', 'http://localhost:3000'],
+  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3333',
+  trustedOrigins: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3333'],
   plugins: [
     openAPI(),
     admin(),
@@ -36,6 +37,7 @@ export const auth: any = betterAuth({
     google:{
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      prompt: 'select_account'
     }
   },
   user: {
