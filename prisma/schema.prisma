@@ -96,30 +96,20 @@ model Foto {
 }
 
 model Ponto_localizada {
-  id           String    @id @default(uuid())
+  id           String           @id @default(uuid())
   eixo_x       Float
   eixo_y       Float
   volume_ml    Float
   tempo_seg    Int
   vazao_l_h    Float
   avaliacao_id String
-  avaliacao    Avaliacao @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
-}
-
-model Ponto_pivo {
-  id               String    @id @default(uuid())
-  sequencia        Int
-  distancia        Float
-  diametro_coletor Float
-  volume_ml        Float
-  tempo_seg        Int
-  vazao_l_h        Float
-  avaliacao_id     String
-  avaliacao        Avaliacao @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
+  avaliacao    Avaliacao        @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
+  setor_id     String
+  setor        Setor_Hidraulico @relation(fields: [setor_id], references: [id], onDelete: Cascade)
 }
 
 model Setor_Hidraulico {
-  id                     String      @id @default(uuid())
+  id                     String             @id @default(uuid())
   fabricante             String
   modelo                 String
   vazao_nominal          Float
@@ -137,11 +127,29 @@ model Setor_Hidraulico {
   freq_manutencao        String
   data_ultima_manutencao DateTime
   emissor_type           EmissorType
+  tipo_setor             UnitModel
+  userId                 String
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   avaliacoes             Avaliacao[]
+  pontos_localizada      Ponto_localizada[]
+}
+
+model Ponto_pivo {
+  id               String       @id @default(uuid())
+  sequencia        Int
+  distancia        Float
+  diametro_coletor Float
+  volume_ml        Float
+  tempo_seg        Int
+  vazao_l_h        Float
+  avaliacao_id     String
+  avaliacao        Avaliacao    @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
+  pivo_id          String
+  pivo             Pivo_Central @relation(fields: [pivo_id], references: [id], onDelete: Cascade)
 }
 
 model Pivo_Central {
-  id                     String      @id @default(uuid())
+  id                     String       @id @default(uuid())
   num_torres             Int
   comprimento            Float
   fabricante             String
@@ -162,19 +170,21 @@ model Pivo_Central {
   problemas_observados   String
   data_ultima_avaliacoes DateTime
   avaliacoes             Avaliacao[]
+  pontos_pivo            Ponto_pivo[]
 }
 
 model User {
-  id            String        @id
-  name          String        @db.Text
-  email         String
-  emailVerified Boolean       @default(false)
-  image         String?       @db.Text
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  Propriedade   Propriedade[]
+  id                  String             @id
+  name                String             @db.Text
+  email               String
+  emailVerified       Boolean            @default(false)
+  image               String?            @db.Text
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  Propriedade         Propriedade[]
+  setores_hidraulicos Setor_Hidraulico[]
 
   role String? @db.Text
 

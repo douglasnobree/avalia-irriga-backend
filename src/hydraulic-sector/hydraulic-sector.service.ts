@@ -5,11 +5,17 @@ import { UpdateHydraulicSectorDto } from './dto/update-hydraulic-sector.dto';
 
 @Injectable()
 export class HydraulicSectorService {
+  async findByUserId(userId: string) {
+    return this.prisma.setor_Hidraulico.findMany({
+      where: { userId },
+    });
+  }
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateHydraulicSectorDto) {
     const hydraulicSector = await this.prisma.setor_Hidraulico.create({
-      data
+      // @ts-ignore
+      data,
     });
     return hydraulicSector;
   }
