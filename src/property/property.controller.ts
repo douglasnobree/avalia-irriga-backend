@@ -11,7 +11,8 @@ import {
 import { PropertyService } from './property.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
-import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { AuthGuard, Session } from '@thallesp/nestjs-better-auth';
+import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { RolesGuard } from 'src/common';
 
 @Controller('property')
@@ -29,14 +30,20 @@ export class PropertyController {
     return this.propertyService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.propertyService.findOne(id);
+  @Get('my-properties')
+  findMyProperties(@Session() session: UserSession) {
+    const userId = session.user.id;
+    return this.propertyService.findByUserId(userId);
   }
 
   @Get('organization/:organizationId')
   findByOrganization(@Param('organizationId') organizationId: string) {
     return this.propertyService.findByOrganization(organizationId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.propertyService.findOne(id);
   }
 
   @Patch(':nome')

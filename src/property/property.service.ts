@@ -9,6 +9,7 @@ export class PropertyService {
 
   async create(data: CreatePropertyDto) {
     const property = await this.prisma.propriedade.create({
+      // @ts-ignore
       data,
     });
     return property;
@@ -50,6 +51,23 @@ export class PropertyService {
   async findByOrganization(organizationId: string) {
     const properties = await this.prisma.propriedade.findMany({
       where: { organizationId },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+          },
+        },
+      },
+    });
+    return properties;
+  }
+
+  async findByUserId(userId: string) {
+    const properties = await this.prisma.propriedade.findMany({
+      where: { userId },
       include: {
         organization: {
           select: {
