@@ -11,6 +11,7 @@ import {
 import { PropertyService } from './property.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { CreateAreaDto } from './dto/create-area.dto';
 import { AuthGuard, Session } from '@thallesp/nestjs-better-auth';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { RolesGuard } from 'src/common';
@@ -57,5 +58,27 @@ export class PropertyController {
   @Delete(':nome')
   remove(@Param('nome') nome: string) {
     return this.propertyService.remove(nome);
+  }
+}
+
+@Controller('areas')
+@UseGuards(AuthGuard)
+export class AreasController {
+  constructor(private readonly propertyService: PropertyService) {}
+
+  @Post()
+  createArea(@Body() createAreaDto: CreateAreaDto, @Session() session: UserSession) {
+    const userId = session.user.id;
+    return this.propertyService.createArea(createAreaDto, userId);
+  }
+
+  @Get('property/:propertyId')
+  getAreasByProperty(@Param('propertyId') propertyId: string) {
+    return this.propertyService.getAreasByProperty(propertyId);
+  }
+
+  @Get(':id')
+  getAreaById(@Param('id') id: string) {
+    return this.propertyService.getAreaById(id);
   }
 }
