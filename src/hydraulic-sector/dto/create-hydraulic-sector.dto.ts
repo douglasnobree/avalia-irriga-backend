@@ -2,9 +2,11 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsDate,
   IsEnum,
+  isNotEmpty,
   IsNotEmpty,
   IsNumber,
   IsPositive,
+  isString,
   IsString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -19,14 +21,35 @@ import { UnitModel } from '@prisma/client';
 
 export class CreateHydraulicSectorDto {
   @ApiProperty({
-    description: 'ID do usuário proprietário do setor hidráulico',
+    description: 'ID da propriedade do setor hidráulico',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsNotEmpty({ message: 'O propriedadeId é obrigatório' })
+  @IsString({ message: 'O propriedadeId deve ser uma string' })
+  propriedadeId: string;
+
+  @IsNotEmpty({ message: 'A identificação é obrigatória' })
+  @IsString({ message: 'A identificação deve ser uma string' })
+  identificacao: string;
+
+  @ApiProperty({
+    description: 'ID do usuário responsável pelo setor hidráulico',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty({ message: 'O userId é obrigatório' })
   @IsString({ message: 'O userId deve ser uma string' })
   userId: string;
 
-
+  @ApiProperty({
+    description: 'Tipo do setor',
+    enum: UnitModel,
+    example: UnitModel.SETOR_HIDRAULICO,
+  })
+  @IsNotEmpty({ message: 'O tipo do setor é obrigatório' })
+  @IsEnum(UnitModel, {
+    message: 'O tipo do setor deve ser SETOR_HIDRAULICO ou PIVO_CENTRAL',
+  })
+  tipo_setor: UnitModel;
 
   @ApiProperty({
     description: 'Nome do fabricante do setor hidráulico',

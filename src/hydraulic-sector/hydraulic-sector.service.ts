@@ -1,15 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../infra/prisma/prisma.service';
 import { CreateHydraulicSectorDto } from './dto/create-hydraulic-sector.dto';
 import { UpdateHydraulicSectorDto } from './dto/update-hydraulic-sector.dto';
 
 @Injectable()
 export class HydraulicSectorService {
+  async findByPropertyId(propriedadeId: string) {
+    return this.prisma.setor_Hidraulico.findMany({
+      where: { propriedadeId },
+    });
+  }
+
   async findByUserId(userId: string) {
     return this.prisma.setor_Hidraulico.findMany({
       where: { userId },
+      include: {
+        propriedade: true,
+      },
     });
   }
+
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateHydraulicSectorDto) {
@@ -59,5 +69,30 @@ export class HydraulicSectorService {
     return this.prisma.setor_Hidraulico.delete({
       where: { id },
     });
+  }
+
+  async findAreasByPropertyId(propertyId: string) {
+    const areas = await this.prisma.setor_Hidraulico.findMany({
+      where: {
+        propriedadeId: propertyId,
+      },
+      include: {
+        avaliacoes: {
+          orderBy: {
+            data: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+    console.log(areas, propertyId);
+
+    if (!areas || areas.length === 0) {
+      throw new NotFoundException(
+        'Nenhuma área encontrada para esta propriedade',
+      );
+    }
+
+    return areas;
   }
 }

@@ -22,16 +22,40 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 @Controller('hydraulic-sector')
 export class HydraulicSectorController {
   @Get('my-sectors')
-  @ApiOperation({ summary: 'Listar setores hidráulicos por usuário' })
+  @ApiOperation({
+    summary: 'Listar todos os setores hidráulicos do usuário logado',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de setores hidráulicos do usuário',
     type: [HydraulicSector],
   })
-  findByUserId(@Session() session: UserSession) {
-    const userId = session.user.id;
-    return this.hydraulicSectorService.findByUserId(userId);
+  findMyHydraulicSectors(@Session() session: UserSession) {
+    return this.hydraulicSectorService.findByUserId(session.user.id);
   }
+
+  @Get('by-property/:propertyId')
+  @ApiOperation({ summary: 'Listar setores hidráulicos por propriedade' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de setores hidráulicos da propriedade',
+    type: [HydraulicSector],
+  })
+  findByPropertyId(@Param('propertyId') propertyId: string) {
+    return this.hydraulicSectorService.findByPropertyId(propertyId);
+  }
+
+  @Get('property/:propertyId/areas')
+  @ApiOperation({ summary: 'Listar todas as áreas de uma propriedade' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de áreas da propriedade',
+  })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada' })
+  findAreasByPropertyId(@Param('propertyId') propertyId: string) {
+    return this.hydraulicSectorService.findAreasByPropertyId(propertyId);
+  }
+
   constructor(
     private readonly hydraulicSectorService: HydraulicSectorService,
   ) {}
@@ -44,13 +68,8 @@ export class HydraulicSectorController {
   })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   create(@Body() createHydraulicSectorDto: CreateHydraulicSectorDto) {
-    // Garante que id não seja enviado pelo cliente e tipo_setor sempre é SETOR_HIDRAULICO
-    const { userId, ...data } = createHydraulicSectorDto;
     return this.hydraulicSectorService.create({
-      ...data,
-      userId,
-      // @ts-ignore
-      tipo_setor: 'SETOR_HIDRAULICO',
+      ...createHydraulicSectorDto,
     });
   }
 
