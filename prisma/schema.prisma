@@ -63,6 +63,7 @@ model Avaliacao {
   tempo_irrigacao  Float
   cud              Float
   cuc              Float
+  cue              Float              @default(0)
   offline_status   Boolean
   avaliador_id     String
   unidade_type     UnitModel
@@ -96,34 +97,31 @@ model Foto {
 }
 
 model Ponto_localizada {
-  id           String           @id @default(uuid())
+  id           String            @id @default(uuid())
   eixo_x       Float
   eixo_y       Float
   volume_ml    Float
   tempo_seg    Int
   vazao_l_h    Float
   avaliacao_id String
-  avaliacao    Avaliacao        @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
-  setor_id     String
-  setor        Setor_Hidraulico @relation(fields: [setor_id], references: [id], onDelete: Cascade)
+  avaliacao    Avaliacao         @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
+  setor_id     String?
+  setor        Setor_Hidraulico? @relation(fields: [setor_id], references: [id], onDelete: Cascade)
 }
 
 model Setor_Hidraulico {
   id                     String             @id @default(uuid())
-  fabricante             String
-  modelo                 String
+  fabricante             String?
+  modelo                 String?
   vazao_nominal          Float
   pressao_trabalho       Float
-  pressao_recomendada    Float
   dist_emissores         Float
   dist_laterais          Float
   filtro_tipo            String
   malha_filtro           String
-  pressao_entrada        Float
   valvula_tipo           String
   energia_tipo           String
-  condicoes_gerais       String
-  num_emissores          Int
+  condicoes_gerais       String?
   freq_manutencao        String
   data_ultima_manutencao DateTime
   emissor_type           EmissorType
@@ -135,7 +133,7 @@ model Setor_Hidraulico {
 }
 
 model Ponto_pivo {
-  id               String       @id @default(uuid())
+  id               String        @id @default(uuid())
   sequencia        Int
   distancia        Float
   diametro_coletor Float
@@ -143,9 +141,9 @@ model Ponto_pivo {
   tempo_seg        Int
   vazao_l_h        Float
   avaliacao_id     String
-  avaliacao        Avaliacao    @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
-  pivo_id          String
-  pivo             Pivo_Central @relation(fields: [pivo_id], references: [id], onDelete: Cascade)
+  avaliacao        Avaliacao     @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade)
+  pivo_id          String?
+  pivo             Pivo_Central? @relation(fields: [pivo_id], references: [id], onDelete: Cascade)
 }
 
 model Pivo_Central {

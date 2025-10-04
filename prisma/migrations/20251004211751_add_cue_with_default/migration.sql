@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `avaliacao` ADD COLUMN `cue` DOUBLE NOT NULL DEFAULT 0;

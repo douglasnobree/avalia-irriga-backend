@@ -15,19 +15,18 @@ export class UnidadeAvaliadaDto {
 
 export class SetorHidraulicoDto {
   @IsString()
-  fabricante: string;
+  @IsOptional()
+  fabricante?: string;
 
   @IsString()
-  modelo: string;
+  @IsOptional()
+  modelo?: string;
 
   @IsNumber()
   vazao_nominal: number;
 
   @IsNumber()
   pressao_trabalho: number;
-
-  @IsNumber()
-  pressao_recomendada: number;
 
   @IsNumber()
   dist_emissores: number;
@@ -41,9 +40,6 @@ export class SetorHidraulicoDto {
   @IsString()
   malha_filtro: string;
 
-  @IsNumber()
-  pressao_entrada: number;
-
   @IsString()
   valvula_tipo: string;
 
@@ -51,10 +47,8 @@ export class SetorHidraulicoDto {
   energia_tipo: string;
 
   @IsString()
-  condicoes_gerais: string;
-
-  @IsNumber()
-  num_emissores: number;
+  @IsOptional()
+  condicoes_gerais?: string;
 
   @IsString()
   freq_manutencao: string;

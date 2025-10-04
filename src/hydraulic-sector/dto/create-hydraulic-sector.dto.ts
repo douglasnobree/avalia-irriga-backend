@@ -31,18 +31,18 @@ export class CreateHydraulicSectorDto {
   @ApiProperty({
     description: 'Nome do fabricante do setor hidráulico',
     example: 'Irrigação Tech',
+    required: false,
   })
-  @IsNotEmpty({ message: 'O fabricante é obrigatório' })
   @IsString({ message: 'O fabricante deve ser uma string' })
-  fabricante: string;
+  fabricante?: string;
 
   @ApiProperty({
     description: 'Modelo do setor hidráulico',
     example: 'Modelo XYZ-2000',
+    required: false,
   })
-  @IsNotEmpty({ message: 'O modelo é obrigatório' })
   @IsString({ message: 'O modelo deve ser uma string' })
-  modelo: string;
+  modelo?: string;
 
   @ApiProperty({
     description: 'Vazão nominal do sistema em m³/h',
@@ -61,15 +61,6 @@ export class CreateHydraulicSectorDto {
   @IsNumber({}, { message: 'A pressão de trabalho deve ser um número' })
   @IsPositive({ message: 'A pressão de trabalho deve ser positiva' })
   pressao_trabalho: number;
-
-  @ApiProperty({
-    description: 'Pressão recomendada pelo fabricante em kgf/cm²',
-    example: 4.0,
-  })
-  @IsNotEmpty({ message: 'A pressão recomendada é obrigatória' })
-  @IsNumber({}, { message: 'A pressão recomendada deve ser um número' })
-  @IsPositive({ message: 'A pressão recomendada deve ser positiva' })
-  pressao_recomendada: number;
 
   @ApiProperty({
     description: 'Distância entre emissores em metros',
@@ -106,15 +97,6 @@ export class CreateHydraulicSectorDto {
   malha_filtro: string;
 
   @ApiProperty({
-    description: 'Pressão na entrada do sistema em kgf/cm²',
-    example: 5.0,
-  })
-  @IsNotEmpty({ message: 'A pressão de entrada é obrigatória' })
-  @IsNumber({}, { message: 'A pressão de entrada deve ser um número' })
-  @IsPositive({ message: 'A pressão de entrada deve ser positiva' })
-  pressao_entrada: number;
-
-  @ApiProperty({
     description: 'Tipo de válvula utilizada',
     example: 'Automática',
   })
@@ -133,19 +115,10 @@ export class CreateHydraulicSectorDto {
   @ApiProperty({
     description: 'Condições gerais do sistema',
     example: 'Boas condições',
+    required: false,
   })
-  @IsNotEmpty({ message: 'As condições gerais são obrigatórias' })
   @IsString({ message: 'As condições gerais devem ser uma string' })
-  condicoes_gerais: string;
-
-  @ApiProperty({
-    description: 'Número de emissores no sistema',
-    example: 50,
-  })
-  @IsNotEmpty({ message: 'O número de emissores é obrigatório' })
-  @IsNumber({}, { message: 'O número de emissores deve ser um número' })
-  @IsPositive({ message: 'O número de emissores deve ser positivo' })
-  num_emissores: number;
+  condicoes_gerais?: string;
 
   @ApiProperty({
     description: 'Frequência de manutenção',

@@ -12,6 +12,7 @@ import { PropertyService } from './property.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateAreaDto } from './dto/create-area.dto';
+import { CreateAvaliacaoDto } from './dto/create-avaliacao.dto';
 import { AuthGuard, Session } from '@thallesp/nestjs-better-auth';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { RolesGuard } from 'src/common';
@@ -47,17 +48,20 @@ export class PropertyController {
     return this.propertyService.findOne(id);
   }
 
-  @Patch(':nome')
+  @Patch(':id')
   update(
-    @Param('nome') nome: string,
+    @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
+    @Session() session: UserSession,
   ) {
-    return this.propertyService.update(nome, updatePropertyDto);
+    const userId = session.user.id;
+    return this.propertyService.updateProperty(id, updatePropertyDto, userId);
   }
 
-  @Delete(':nome')
-  remove(@Param('nome') nome: string) {
-    return this.propertyService.remove(nome);
+  @Delete(':id')
+  remove(@Param('id') id: string, @Session() session: UserSession) {
+    const userId = session.user.id;
+    return this.propertyService.deleteProperty(id, userId);
   }
 }
 
@@ -80,5 +84,52 @@ export class AreasController {
   @Get(':id')
   getAreaById(@Param('id') id: string) {
     return this.propertyService.getAreaById(id);
+  }
+
+  @Patch(':id')
+  updateArea(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Session() session: UserSession,
+  ) {
+    const userId = session.user.id;
+    return this.propertyService.updateArea(id, data, userId);
+  }
+
+  @Delete(':id')
+  deleteArea(@Param('id') id: string, @Session() session: UserSession) {
+    const userId = session.user.id;
+    return this.propertyService.deleteArea(id, userId);
+  }
+}
+
+@Controller('avaliacoes')
+@UseGuards(AuthGuard)
+export class AvaliacoesController {
+  constructor(private readonly propertyService: PropertyService) {}
+
+  @Post()
+  createAvaliacao(
+    @Body() createAvaliacaoDto: CreateAvaliacaoDto,
+    @Session() session: UserSession,
+  ) {
+    const userId = session.user.id;
+    return this.propertyService.createAvaliacao(createAvaliacaoDto, userId);
+  }
+
+  @Get('area/:areaId')
+  getAvaliacoesByArea(@Param('areaId') areaId: string) {
+    return this.propertyService.getAvaliacoesByArea(areaId);
+  }
+
+  @Get(':id')
+  getAvaliacaoById(@Param('id') id: string) {
+    return this.propertyService.getAvaliacaoById(id);
+  }
+
+  @Delete(':id')
+  deleteAvaliacao(@Param('id') id: string, @Session() session: UserSession) {
+    const userId = session.user.id;
+    return this.propertyService.deleteAvaliacao(id, userId);
   }
 }
