@@ -27,23 +27,25 @@ model Account {
 }
 
 model Propriedade {
-  id               String             @id @unique @default(uuid())
-  nome             String
-  proprietario     String
-  telefone         String
-  email            String
-  municipio        String
-  estado           String
-  latitude         Float
-  longitude        Float
-  area_total       Float
-  area_irrigada    Float
-  observacoes      String?
-  userId           String
-  organizationId   String
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Unidade_avaliada Unidade_avaliada[]
+  id                  String             @id @unique @default(uuid())
+  nome                String
+  proprietario        String
+  telefone            String
+  email               String
+  municipio           String
+  estado              String
+  latitude            Float
+  longitude           Float
+  area_total          Float
+  area_irrigada       Float
+  observacoes         String?
+  userId              String
+  organizationId      String
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization        Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Unidade_avaliada    Unidade_avaliada[]
+  setores_hidraulicos Setor_Hidraulico[]
+  pivos_centrais      Pivo_Central[]
 }
 
 model Unidade_avaliada {
@@ -110,6 +112,7 @@ model Ponto_localizada {
 
 model Setor_Hidraulico {
   id                     String             @id @default(uuid())
+  identificacao          String
   fabricante             String
   modelo                 String
   vazao_nominal          Float
@@ -128,7 +131,9 @@ model Setor_Hidraulico {
   data_ultima_manutencao DateTime
   emissor_type           EmissorType
   tipo_setor             UnitModel
+  propriedadeId          String
   userId                 String
+  propriedade            Propriedade        @relation(fields: [propriedadeId], references: [id], onDelete: Cascade)
   user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   avaliacoes             Avaliacao[]
   pontos_localizada      Ponto_localizada[]
@@ -150,6 +155,7 @@ model Ponto_pivo {
 
 model Pivo_Central {
   id                     String       @id @default(uuid())
+  identificacao          String
   num_torres             Int
   comprimento            Float
   fabricante             String
@@ -169,6 +175,10 @@ model Pivo_Central {
   freq_manutencao        String
   problemas_observados   String
   data_ultima_avaliacoes DateTime
+  propriedadeId          String
+  userId                 String
+  propriedade            Propriedade  @relation(fields: [propriedadeId], references: [id], onDelete: Cascade)
+  user                   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   avaliacoes             Avaliacao[]
   pontos_pivo            Ponto_pivo[]
 }
@@ -185,6 +195,7 @@ model User {
   accounts            Account[]
   Propriedade         Propriedade[]
   setores_hidraulicos Setor_Hidraulico[]
+  pivos_centrais      Pivo_Central[]
 
   role String? @db.Text
 
