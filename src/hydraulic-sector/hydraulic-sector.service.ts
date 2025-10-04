@@ -14,9 +14,6 @@ export class HydraulicSectorService {
   async findByUserId(userId: string) {
     return this.prisma.setor_Hidraulico.findMany({
       where: { userId },
-      include: {
-        propriedade: true,
-      },
     });
   }
 

@@ -144,6 +144,7 @@ export class PropertyService {
         if (dto.setor_hidraulico) {
           await tx.setor_Hidraulico.create({
             data: {
+              identificacao: dto.area.indentificacao, // Usa a identificação da área
               fabricante: dto.setor_hidraulico.fabricante,
               modelo: dto.setor_hidraulico.modelo,
               vazao_nominal: dto.setor_hidraulico.vazao_nominal,
@@ -159,6 +160,7 @@ export class PropertyService {
               data_ultima_manutencao: new Date(dto.setor_hidraulico.data_ultima_manutencao),
               emissor_type: dto.setor_hidraulico.emissor_type,
               tipo_setor: dto.setor_hidraulico.tipo_setor,
+              propriedadeId: dto.area.propriedade_id,
               userId,
             },
           });
@@ -168,6 +170,7 @@ export class PropertyService {
         if (dto.pivo_central) {
           await tx.pivo_Central.create({
             data: {
+              identificacao: dto.area.indentificacao, // Usa a identificação da área
               num_torres: dto.pivo_central.num_torres,
               comprimento: dto.pivo_central.comprimento,
               fabricante: dto.pivo_central.fabricante,
@@ -187,6 +190,8 @@ export class PropertyService {
               freq_manutencao: dto.pivo_central.freq_manutencao,
               problemas_observados: dto.pivo_central.problemas_observados || '',
               data_ultima_avaliacoes: new Date(dto.pivo_central.data_ultima_avaliacoes),
+              propriedadeId: dto.area.propriedade_id,
+              userId,
             },
           });
         }
