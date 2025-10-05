@@ -71,10 +71,12 @@ export class PivoCentralDto {
   comprimento: number;
 
   @IsString()
-  fabricante: string;
+  @IsOptional()
+  fabricante?: string;
 
   @IsString()
-  modelo: string;
+  @IsOptional()
+  modelo?: string;
 
   @IsEnum(EmissorType)
   emissor_type: EmissorType;

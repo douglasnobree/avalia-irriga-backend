@@ -173,8 +173,8 @@ export class PropertyService {
               identificacao: dto.area.indentificacao, // Usa a identificação da área
               num_torres: dto.pivo_central.num_torres,
               comprimento: dto.pivo_central.comprimento,
-              fabricante: dto.pivo_central.fabricante,
-              modelo: dto.pivo_central.modelo,
+              fabricante: dto.pivo_central.fabricante || '',
+              modelo: dto.pivo_central.modelo || '',
               emissor_type: dto.pivo_central.emissor_type,
               energia_tipo: dto.pivo_central.energia_tipo,
               potencia_motor: dto.pivo_central.potencia_motor,
@@ -285,6 +285,21 @@ export class PropertyService {
         throw new BadRequestException('Área não encontrada');
       }
 
+      // Buscar setor hidráulico ou pivô central associado pelo identificacao
+      const setorHidraulico = await this.prisma.setor_Hidraulico.findFirst({
+        where: { 
+          identificacao: area.indentificacao,
+          propriedadeId: area.propriedade_id,
+        },
+      });
+
+      const pivoCentral = await this.prisma.pivo_Central.findFirst({
+        where: { 
+          identificacao: area.indentificacao,
+          propriedadeId: area.propriedade_id,
+        },
+      });
+
       return {
         id: area.id,
         indentificacao: area.indentificacao,
@@ -292,6 +307,9 @@ export class PropertyService {
         propriedade_id: area.propriedade_id,
         propriedade: area.propiedade,
         avaliacoes: area.avaliacoes,
+        setor_hidraulico: setorHidraulico,
+        pivo_central: pivoCentral,
+        tipo_setor: setorHidraulico ? 'SETOR_HIDRAULICO' : pivoCentral ? 'PIVO_CENTRAL' : null,
       };
     } catch (error) {
       console.error('Erro ao buscar área:', error);
@@ -580,12 +598,95 @@ export class PropertyService {
         throw new BadRequestException('Você não tem permissão para editar esta área');
       }
 
-      return this.prisma.unidade_avaliada.update({
-        where: { id },
-        data: {
-          indentificacao: data.indentificacao,
-          area_ha: data.area_ha,
-        },
+      // Usar transação para garantir atomicidade
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Atualizar Unidade_avaliada
+        const updatedArea = await tx.unidade_avaliada.update({
+          where: { id },
+          data: {
+            indentificacao: data.area?.indentificacao || area.indentificacao,
+            area_ha: data.area?.area_ha || area.area_ha,
+          },
+        });
+
+        // 2. Atualizar Setor Hidráulico (se fornecido)
+        if (data.setor_hidraulico) {
+          // Buscar setor existente
+          const setorExistente = await tx.setor_Hidraulico.findFirst({
+            where: {
+              identificacao: area.indentificacao,
+              propriedadeId: area.propriedade_id,
+            },
+          });
+
+          if (setorExistente) {
+            await tx.setor_Hidraulico.update({
+              where: { id: setorExistente.id },
+              data: {
+                identificacao: data.area?.indentificacao || area.indentificacao, // Atualiza identificação se mudou
+                fabricante: data.setor_hidraulico.fabricante,
+                modelo: data.setor_hidraulico.modelo,
+                vazao_nominal: data.setor_hidraulico.vazao_nominal,
+                pressao_trabalho: data.setor_hidraulico.pressao_trabalho,
+                dist_emissores: data.setor_hidraulico.dist_emissores,
+                dist_laterais: data.setor_hidraulico.dist_laterais,
+                filtro_tipo: data.setor_hidraulico.filtro_tipo,
+                malha_filtro: data.setor_hidraulico.malha_filtro,
+                valvula_tipo: data.setor_hidraulico.valvula_tipo,
+                energia_tipo: data.setor_hidraulico.energia_tipo,
+                condicoes_gerais: data.setor_hidraulico.condicoes_gerais,
+                freq_manutencao: data.setor_hidraulico.freq_manutencao,
+                data_ultima_manutencao: new Date(data.setor_hidraulico.data_ultima_manutencao),
+                emissor_type: data.setor_hidraulico.emissor_type,
+              },
+            });
+          }
+        }
+
+        // 3. Atualizar Pivô Central (se fornecido)
+        if (data.pivo_central) {
+          // Buscar pivô existente
+          const pivoExistente = await tx.pivo_Central.findFirst({
+            where: {
+              identificacao: area.indentificacao,
+              propriedadeId: area.propriedade_id,
+            },
+          });
+
+          if (pivoExistente) {
+            await tx.pivo_Central.update({
+              where: { id: pivoExistente.id },
+              data: {
+                identificacao: data.area?.indentificacao || area.indentificacao, // Atualiza identificação se mudou
+                num_torres: data.pivo_central.num_torres,
+                comprimento: data.pivo_central.comprimento,
+                fabricante: data.pivo_central.fabricante || '',
+                modelo: data.pivo_central.modelo || '',
+                emissor_type: data.pivo_central.emissor_type,
+                energia_tipo: data.pivo_central.energia_tipo,
+                potencia_motor: data.pivo_central.potencia_motor,
+                vazao_operacao: data.pivo_central.vazao_operacao,
+                controle_tipo: data.pivo_central.controle_tipo,
+                fertirrigacao: data.pivo_central.fertirrigacao,
+                fonte_hidrica: data.pivo_central.fonte_hidrica,
+                tempo_funcionamento: data.pivo_central.tempo_funcionamento,
+                velocidade: data.pivo_central.velocidade,
+                bocal_tipo: data.pivo_central.bocal_tipo,
+                pressao_bocal: data.pivo_central.pressao_bocal,
+                data_ultima_manutencao: new Date(data.pivo_central.data_ultima_manutencao),
+                freq_manutencao: data.pivo_central.freq_manutencao,
+                problemas_observados: data.pivo_central.problemas_observados || '',
+                data_ultima_avaliacoes: new Date(data.pivo_central.data_ultima_avaliacoes),
+              },
+            });
+          }
+        }
+
+        return {
+          success: true,
+          message: 'Área atualizada com sucesso',
+          data: updatedArea,
+        };
       });
     } catch (error) {
       console.error('Erro ao atualizar área:', error);
