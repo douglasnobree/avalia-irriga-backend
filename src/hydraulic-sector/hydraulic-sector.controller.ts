@@ -21,6 +21,9 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 @ApiTags('Setor Hidráulico')
 @Controller('hydraulic-sector')
 export class HydraulicSectorController {
+  constructor(
+    private readonly hydraulicSectorService: HydraulicSectorService,
+  ) {}
   @Get('my-sectors')
   @ApiOperation({
     summary: 'Listar todos os setores hidráulicos do usuário logado',
@@ -55,10 +58,6 @@ export class HydraulicSectorController {
   findAreasByPropertyId(@Param('propertyId') propertyId: string) {
     return this.hydraulicSectorService.findAreasByPropertyId(propertyId);
   }
-
-  constructor(
-    private readonly hydraulicSectorService: HydraulicSectorService,
-  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Criar um novo setor hidráulico' })
