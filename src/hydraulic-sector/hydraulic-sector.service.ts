@@ -45,7 +45,7 @@ export class HydraulicSectorService {
     });
 
     if (!hydraulicSector) {
-      throw new Error('Setor hidráulico não encontrado');
+      throw new NotFoundException(`Setor hidráulico com ID '${id}' não encontrado`);
     }
 
     return this.prisma.setor_Hidraulico.update({
@@ -60,7 +60,7 @@ export class HydraulicSectorService {
     });
 
     if (!hydraulicSector) {
-      throw new Error('Setor hidráulico não encontrado');
+      throw new NotFoundException(`Setor hidráulico com ID '${id}' não encontrado`);
     }
 
     return this.prisma.setor_Hidraulico.delete({
