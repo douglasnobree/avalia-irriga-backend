@@ -6,16 +6,18 @@ import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { PropertyModule } from './property/property.module';
 import { HydraulicSectorModule } from './hydraulic-sector/hydraulic-sector.module';
 import { auth } from './lib/auth';
+import { AreasModule } from './areas/areas.module';
 
 @Module({
   imports: [
-    AuthModule.forRoot({auth}),
+    AuthModule.forRoot({ auth }),
     PrismaModule,
     PropertyModule,
     HydraulicSectorModule,
+    AreasModule,
   ],
   controllers: [ProtectedController],
   providers: [LoggerService],
-  exports: [LoggerService], 
+  exports: [LoggerService],
 })
 export class AppModule {}

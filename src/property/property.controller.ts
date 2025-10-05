@@ -65,7 +65,7 @@ export class PropertyController {
   }
 }
 
-@Controller('areas')
+@Controller('sai')
 @UseGuards(AuthGuard)
 export class AreasController {
   constructor(private readonly propertyService: PropertyService) {}

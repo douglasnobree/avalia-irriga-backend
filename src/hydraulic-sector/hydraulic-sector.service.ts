@@ -5,6 +5,7 @@ import { UpdateHydraulicSectorDto } from './dto/update-hydraulic-sector.dto';
 
 @Injectable()
 export class HydraulicSectorService {
+  constructor(private prisma: PrismaService) {}
   async findByPropertyId(propriedadeId: string) {
     return this.prisma.setor_Hidraulico.findMany({
       where: { propriedadeId },
@@ -16,8 +17,6 @@ export class HydraulicSectorService {
       where: { userId },
     });
   }
-
-  constructor(private prisma: PrismaService) {}
 
   async create(data: CreateHydraulicSectorDto) {
     const hydraulicSector = await this.prisma.setor_Hidraulico.create({
@@ -45,7 +44,9 @@ export class HydraulicSectorService {
     });
 
     if (!hydraulicSector) {
-      throw new NotFoundException(`Setor hidráulico com ID '${id}' não encontrado`);
+      throw new NotFoundException(
+        `Setor hidráulico com ID '${id}' não encontrado`,
+      );
     }
 
     return this.prisma.setor_Hidraulico.update({
@@ -60,7 +61,9 @@ export class HydraulicSectorService {
     });
 
     if (!hydraulicSector) {
-      throw new NotFoundException(`Setor hidráulico com ID '${id}' não encontrado`);
+      throw new NotFoundException(
+        `Setor hidráulico com ID '${id}' não encontrado`,
+      );
     }
 
     return this.prisma.setor_Hidraulico.delete({
