@@ -41,7 +41,7 @@ export class PontoMedicaoDto {
 
 export class CreateAvaliacaoDto {
   @IsString()
-  unidade_id: string;
+  area_id: string;
 
   @IsNumber()
   area_irrigada: number;

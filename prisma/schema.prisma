@@ -43,19 +43,11 @@ model Propriedade {
   organizationId      String
   user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization        Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Unidade_avaliada    Unidade_avaliada[]
   setores_hidraulicos Setor_Hidraulico[]
   pivos_centrais      Pivo_Central[]
 }
 
-model Unidade_avaliada {
-  id             String      @id @default(uuid())
-  indentificacao String
-  area_ha        Float
-  propriedade_id String
-  avaliacoes     Avaliacao[]
-  propiedade     Propriedade @relation(fields: [propriedade_id], references: [id], onDelete: Cascade)
-}
+
 
 model Avaliacao {
   id               String             @id @default(uuid())
@@ -69,12 +61,10 @@ model Avaliacao {
   offline_status   Boolean
   avaliador_id     String
   unidade_type     UnitModel
-  unidade_id       String
   setor_id         String?
   pivo_id          String?
   pivo             Pivo_Central?      @relation(fields: [pivo_id], references: [id])
   setor            Setor_Hidraulico?  @relation(fields: [setor_id], references: [id])
-  unidade          Unidade_avaliada   @relation(fields: [unidade_id], references: [id])
   Comentario       Comentario[]
   Ponto_localizada Ponto_localizada[]
   Ponto_pivo       Ponto_pivo[]

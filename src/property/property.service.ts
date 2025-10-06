@@ -129,22 +129,30 @@ export class PropertyService {
         throw new BadRequestException('Propriedade não encontrada');
       }
 
+      // Verificar se pelo menos um tipo foi fornecido
+      if (!dto.setor_hidraulico && !dto.pivo_central) {
+        throw new BadRequestException(
+          'É necessário fornecer dados do Setor Hidráulico ou Pivô Central',
+        );
+      }
+
+      // Verificar se ambos os tipos foram fornecidos (não permitido)
+      if (dto.setor_hidraulico && dto.pivo_central) {
+        throw new BadRequestException(
+          'Não é possível criar Setor Hidráulico e Pivô Central ao mesmo tempo',
+        );
+      }
+
       // Usar transação para garantir atomicidade
       return await this.prisma.$transaction(async (tx) => {
-        // 1. Criar a Unidade_avaliada
-        const unidadeAvaliada = await tx.unidade_avaliada.create({
-          data: {
-            indentificacao: dto.area.indentificacao,
-            area_ha: dto.area.area_ha,
-            propriedade_id: dto.area.propriedade_id,
-          },
-        });
+        let unidadeId: string | undefined;
+        let tipo: string | undefined;
 
-        // 2. Criar o Setor Hidráulico (se fornecido)
+        // Criar o Setor Hidráulico (se fornecido)
         if (dto.setor_hidraulico) {
-          await tx.setor_Hidraulico.create({
+          const setorHidraulico = await tx.setor_Hidraulico.create({
             data: {
-              identificacao: dto.area.indentificacao, // Usa a identificação da área
+              identificacao: dto.area.indentificacao,
               fabricante: dto.setor_hidraulico.fabricante,
               modelo: dto.setor_hidraulico.modelo,
               vazao_nominal: dto.setor_hidraulico.vazao_nominal,
@@ -157,20 +165,24 @@ export class PropertyService {
               energia_tipo: dto.setor_hidraulico.energia_tipo,
               condicoes_gerais: dto.setor_hidraulico.condicoes_gerais,
               freq_manutencao: dto.setor_hidraulico.freq_manutencao,
-              data_ultima_manutencao: new Date(dto.setor_hidraulico.data_ultima_manutencao),
+              data_ultima_manutencao: new Date(
+                dto.setor_hidraulico.data_ultima_manutencao,
+              ),
               emissor_type: dto.setor_hidraulico.emissor_type,
               tipo_setor: dto.setor_hidraulico.tipo_setor,
               propriedadeId: dto.area.propriedade_id,
               userId,
             },
           });
+          unidadeId = setorHidraulico.id;
+          tipo = 'SETOR_HIDRAULICO';
         }
 
-        // 3. Criar o Pivô Central (se fornecido)
+        // Criar o Pivô Central (se fornecido)
         if (dto.pivo_central) {
-          await tx.pivo_Central.create({
+          const pivoCentral = await tx.pivo_Central.create({
             data: {
-              identificacao: dto.area.indentificacao, // Usa a identificação da área
+              identificacao: dto.area.indentificacao,
               num_torres: dto.pivo_central.num_torres,
               comprimento: dto.pivo_central.comprimento,
               fabricante: dto.pivo_central.fabricante || '',
@@ -186,22 +198,33 @@ export class PropertyService {
               velocidade: dto.pivo_central.velocidade,
               bocal_tipo: dto.pivo_central.bocal_tipo,
               pressao_bocal: dto.pivo_central.pressao_bocal,
-              data_ultima_manutencao: new Date(dto.pivo_central.data_ultima_manutencao),
+              data_ultima_manutencao: new Date(
+                dto.pivo_central.data_ultima_manutencao,
+              ),
               freq_manutencao: dto.pivo_central.freq_manutencao,
               problemas_observados: dto.pivo_central.problemas_observados || '',
-              data_ultima_avaliacoes: new Date(dto.pivo_central.data_ultima_avaliacoes),
+              data_ultima_avaliacoes: new Date(
+                dto.pivo_central.data_ultima_avaliacoes,
+              ),
               propriedadeId: dto.area.propriedade_id,
               userId,
             },
           });
+          unidadeId = pivoCentral.id;
+          tipo = 'PIVO_CENTRAL';
+        }
+
+        if (!unidadeId || !tipo) {
+          throw new BadRequestException('Erro interno: unidade não foi criada');
         }
 
         return {
           success: true,
-          message: 'Área criada com sucesso',
+          message: `${tipo === 'SETOR_HIDRAULICO' ? 'Setor Hidráulico' : 'Pivô Central'} criado com sucesso`,
           data: {
-            id: unidadeAvaliada.id,
-            indentificacao: unidadeAvaliada.indentificacao,
+            id: unidadeId,
+            indentificacao: dto.area.indentificacao,
+            tipo,
           },
         };
       });
@@ -216,9 +239,10 @@ export class PropertyService {
 
   async getAreasByProperty(propertyId: string) {
     try {
-      const areas = await this.prisma.unidade_avaliada.findMany({
+      // Buscar setores hidráulicos da propriedade
+      const setoresHidraulicos = await this.prisma.setor_Hidraulico.findMany({
         where: {
-          propriedade_id: propertyId,
+          propriedadeId: propertyId,
         },
         include: {
           avaliacoes: {
@@ -235,18 +259,58 @@ export class PropertyService {
           },
         },
         orderBy: {
-          indentificacao: 'asc',
+          identificacao: 'asc',
         },
       });
 
-      // Formatar a resposta para incluir ultima avaliação
-      return areas.map(area => ({
-        id: area.id,
-        indentificacao: area.indentificacao,
-        area_ha: area.area_ha,
-        propriedade_id: area.propriedade_id,
-        ultimaAvaliacao: area.avaliacoes[0] || null,
+      // Buscar pivôs centrais da propriedade
+      const pivosCentrais = await this.prisma.pivo_Central.findMany({
+        where: {
+          propriedadeId: propertyId,
+        },
+        include: {
+          avaliacoes: {
+            orderBy: {
+              data: 'desc',
+            },
+            take: 1,
+            select: {
+              id: true,
+              data: true,
+              cud: true,
+              cuc: true,
+            },
+          },
+        },
+        orderBy: {
+          identificacao: 'asc',
+        },
+      });
+
+      // Mapear setores hidráulicos para formato comum
+      const setoresFormatados = setoresHidraulicos.map((setor) => ({
+        id: setor.id,
+        indentificacao: setor.identificacao,
+        tipo: 'SETOR_HIDRAULICO' as const,
+        propriedade_id: setor.propriedadeId,
+        ultimaAvaliacao: setor.avaliacoes[0] || null,
       }));
+
+      // Mapear pivôs centrais para formato comum
+      const pivosFormatados = pivosCentrais.map((pivo) => ({
+        id: pivo.id,
+        indentificacao: pivo.identificacao,
+        tipo: 'PIVO_CENTRAL' as const,
+        propriedade_id: pivo.propriedadeId,
+        ultimaAvaliacao: pivo.avaliacoes[0] || null,
+      }));
+
+      // Combinar e ordenar por identificação
+      const areas = [...setoresFormatados, ...pivosFormatados].sort((a, b) =>
+        a.indentificacao.localeCompare(b.indentificacao),
+      );
+
+      return areas;
     } catch (error) {
       console.error('Erro ao buscar áreas:', error);
       throw new BadRequestException('Erro ao buscar áreas: ' + error.message);
@@ -255,7 +319,8 @@ export class PropertyService {
 
   async getAreaById(id: string) {
     try {
-      const area = await this.prisma.unidade_avaliada.findUnique({
+      // Primeiro, tentar buscar como setor hidráulico
+      const setorHidraulico = await this.prisma.setor_Hidraulico.findUnique({
         where: { id },
         include: {
           avaliacoes: {
@@ -272,7 +337,7 @@ export class PropertyService {
               tempo_irrigacao: true,
             },
           },
-          propiedade: {
+          propriedade: {
             select: {
               id: true,
               nome: true,
@@ -281,36 +346,60 @@ export class PropertyService {
         },
       });
 
-      if (!area) {
-        throw new BadRequestException('Área não encontrada');
+      if (setorHidraulico) {
+        return {
+          id: setorHidraulico.id,
+          indentificacao: setorHidraulico.identificacao,
+          propriedade_id: setorHidraulico.propriedadeId,
+          propriedade: setorHidraulico.propriedade,
+          avaliacoes: setorHidraulico.avaliacoes,
+          setor_hidraulico: setorHidraulico,
+          pivo_central: null,
+          tipo_setor: 'SETOR_HIDRAULICO',
+        };
       }
 
-      // Buscar setor hidráulico ou pivô central associado pelo identificacao
-      const setorHidraulico = await this.prisma.setor_Hidraulico.findFirst({
-        where: { 
-          identificacao: area.indentificacao,
-          propriedadeId: area.propriedade_id,
+      // Se não encontrou como setor hidráulico, tentar como pivô central
+      const pivoCentral = await this.prisma.pivo_Central.findUnique({
+        where: { id },
+        include: {
+          avaliacoes: {
+            orderBy: {
+              data: 'desc',
+            },
+            select: {
+              id: true,
+              data: true,
+              cud: true,
+              cuc: true,
+              area_irrigada: true,
+              volume_agua: true,
+              tempo_irrigacao: true,
+            },
+          },
+          propriedade: {
+            select: {
+              id: true,
+              nome: true,
+            },
+          },
         },
       });
 
-      const pivoCentral = await this.prisma.pivo_Central.findFirst({
-        where: { 
-          identificacao: area.indentificacao,
-          propriedadeId: area.propriedade_id,
-        },
-      });
+      if (pivoCentral) {
+        return {
+          id: pivoCentral.id,
+          indentificacao: pivoCentral.identificacao,
+          propriedade_id: pivoCentral.propriedadeId,
+          propriedade: pivoCentral.propriedade,
+          avaliacoes: pivoCentral.avaliacoes,
+          setor_hidraulico: null,
+          pivo_central: pivoCentral,
+          tipo_setor: 'PIVO_CENTRAL',
+        };
+      }
 
-      return {
-        id: area.id,
-        indentificacao: area.indentificacao,
-        area_ha: area.area_ha,
-        propriedade_id: area.propriedade_id,
-        propriedade: area.propiedade,
-        avaliacoes: area.avaliacoes,
-        setor_hidraulico: setorHidraulico,
-        pivo_central: pivoCentral,
-        tipo_setor: setorHidraulico ? 'SETOR_HIDRAULICO' : pivoCentral ? 'PIVO_CENTRAL' : null,
-      };
+      throw new BadRequestException('Unidade não encontrada');
     } catch (error) {
       console.error('Erro ao buscar área:', error);
       if (error instanceof BadRequestException) {
@@ -322,14 +411,8 @@ export class PropertyService {
 
   async createAvaliacao(dto: CreateAvaliacaoDto, userId: string) {
     try {
+      console.log('Criando avaliação com DTO:', dto);
       // Verificar se a unidade avaliada existe
-      const unidadeAvaliada = await this.prisma.unidade_avaliada.findUnique({
-        where: { id: dto.unidade_id },
-      });
-
-      if (!unidadeAvaliada) {
-        throw new BadRequestException('Unidade avaliada não encontrada');
-      }
 
       // Calcular vazões e coeficientes de uniformidade
       let cuc = 0;
@@ -338,7 +421,7 @@ export class PropertyService {
 
       if (dto.pontos && dto.pontos.length > 0) {
         // Calcular vazão para cada ponto (se não foi fornecida)
-        const pontosComVazao = dto.pontos.map(ponto => {
+        const pontosComVazao = dto.pontos.map((ponto) => {
           if (!ponto.vazao_l_h && ponto.volume_ml && ponto.tempo_seg) {
             ponto.vazao_l_h = this.uniformityCalc.calcularVazao(
               ponto.volume_ml,
@@ -350,8 +433,8 @@ export class PropertyService {
 
         // Extrair apenas as vazões para cálculo dos coeficientes
         const vazoes = pontosComVazao
-          .map(p => p.vazao_l_h)
-          .filter(v => v && v > 0);
+          .map((p) => p.vazao_l_h)
+          .filter((v) => v && v > 0);
 
         if (vazoes.length > 0) {
           const coeficientes = this.uniformityCalc.calcularCoeficientes(vazoes);
@@ -379,7 +462,6 @@ export class PropertyService {
             offline_status: dto.offline_status,
             avaliador_id: userId,
             unidade_type: dto.unidade_type,
-            unidade_id: dto.unidade_id,
             setor_id: dto.setor_id,
             pivo_id: dto.pivo_id,
           },
@@ -390,7 +472,7 @@ export class PropertyService {
           if (dto.unidade_type === 'SETOR_HIDRAULICO') {
             // Criar pontos para Setor Hidráulico
             await tx.ponto_localizada.createMany({
-              data: dto.pontos.map(ponto => {
+              data: dto.pontos.map((ponto) => {
                 const pontoData: any = {
                   eixo_x: ponto.eixo_x || 0,
                   eixo_y: ponto.eixo_y || 0,
@@ -408,7 +490,7 @@ export class PropertyService {
           } else if (dto.unidade_type === 'PIVO_CENTRAL') {
             // Criar pontos para Pivô Central
             await tx.ponto_pivo.createMany({
-              data: dto.pontos.map(ponto => {
+              data: dto.pontos.map((ponto) => {
                 const pontoData: any = {
                   sequencia: ponto.sequencia,
                   distancia: ponto.distancia || 0,
@@ -471,32 +553,76 @@ export class PropertyService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao criar avaliação: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao criar avaliação: ' + error.message,
+      );
     }
   }
 
   async getAvaliacoesByArea(areaId: string) {
     try {
-      const avaliacoes = await this.prisma.avaliacao.findMany({
-        where: {
-          unidade_id: areaId,
-        },
-        include: {
-          Comentario: {
-            orderBy: {
-              createdAt: 'desc',
-            },
-          },
-        },
-        orderBy: {
-          data: 'desc',
-        },
+      // Primeiro, verificar se é um setor hidráulico
+      const setorHidraulico = await this.prisma.setor_Hidraulico.findUnique({
+        where: { id: areaId },
       });
 
-      return avaliacoes;
+      if (setorHidraulico) {
+        // Buscar avaliações do setor hidráulico
+        const avaliacoes = await this.prisma.avaliacao.findMany({
+          where: {
+            setor_id: areaId,
+          },
+          include: {
+            Comentario: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+          },
+          orderBy: {
+            data: 'desc',
+          },
+        });
+
+        return avaliacoes;
+      }
+
+      // Se não é setor hidráulico, verificar se é pivô central
+      const pivoCentral = await this.prisma.pivo_Central.findUnique({
+        where: { id: areaId },
+      });
+
+      if (pivoCentral) {
+        // Buscar avaliações do pivô central
+        const avaliacoes = await this.prisma.avaliacao.findMany({
+          where: {
+            pivo_id: areaId,
+          },
+          include: {
+            Comentario: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+          },
+          orderBy: {
+            data: 'desc',
+          },
+        });
+
+        return avaliacoes;
+      }
+
+      // Se não encontrou nem setor nem pivô, retornar erro
+      throw new BadRequestException('Unidade não encontrada');
     } catch (error) {
       console.error('Erro ao buscar avaliações:', error);
-      throw new BadRequestException('Erro ao buscar avaliações: ' + error.message);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Erro ao buscar avaliações: ' + error.message,
+      );
     }
   }
 
@@ -505,12 +631,18 @@ export class PropertyService {
       const avaliacao = await this.prisma.avaliacao.findUnique({
         where: { id },
         include: {
-          unidade: {
+          setor: {
             select: {
               id: true,
-              indentificacao: true,
-              area_ha: true,
-              propriedade_id: true,
+              identificacao: true,
+              propriedadeId: true,
+            },
+          },
+          pivo: {
+            select: {
+              id: true,
+              identificacao: true,
+              propriedadeId: true,
             },
           },
           Ponto_localizada: {
@@ -538,13 +670,38 @@ export class PropertyService {
         throw new BadRequestException('Avaliação não encontrada');
       }
 
-      return avaliacao;
+      // Obter informações da unidade (setor ou pivô)
+      let unidadeInfo: {
+        id: string;
+        indentificacao: string;
+        propriedade_id: string;
+      } | null = null;
+      if (avaliacao.setor) {
+        unidadeInfo = {
+          id: avaliacao.setor.id,
+          indentificacao: avaliacao.setor.identificacao,
+          propriedade_id: avaliacao.setor.propriedadeId,
+        };
+      } else if (avaliacao.pivo) {
+        unidadeInfo = {
+          id: avaliacao.pivo.id,
+          indentificacao: avaliacao.pivo.identificacao,
+          propriedade_id: avaliacao.pivo.propriedadeId,
+        };
+      }
+
+      return {
+        ...avaliacao,
+        unidade: unidadeInfo,
+      };
     } catch (error) {
       console.error('Erro ao buscar avaliação:', error);
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao buscar avaliação: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao buscar avaliação: ' + error.message,
+      );
     }
   }
 
@@ -562,7 +719,9 @@ export class PropertyService {
       }
 
       if (property.userId !== userId) {
-        throw new BadRequestException('Você não tem permissão para editar esta propriedade');
+        throw new BadRequestException(
+          'Você não tem permissão para editar esta propriedade',
+        );
       }
 
       const { userId: _, ...updateData } = data;
@@ -575,119 +734,157 @@ export class PropertyService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao atualizar propriedade: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao atualizar propriedade: ' + error.message,
+      );
     }
   }
 
   async updateArea(id: string, data: any, userId: string) {
     try {
-      // Verificar se a área existe
-      const area = await this.prisma.unidade_avaliada.findUnique({
+      // Primeiro, verificar se é um setor hidráulico
+      const setorHidraulico = await this.prisma.setor_Hidraulico.findUnique({
         where: { id },
         include: {
-          propiedade: true,
+          propriedade: true,
         },
       });
 
-      if (!area) {
-        throw new BadRequestException('Área não encontrada');
-      }
+      if (setorHidraulico) {
+        // Verificar se o usuário é dono da propriedade
+        if (setorHidraulico.propriedade.userId !== userId) {
+          throw new BadRequestException(
+            'Você não tem permissão para editar esta área',
+          );
+        }
 
-      // Verificar se o usuário é dono da propriedade
-      if (area.propiedade.userId !== userId) {
-        throw new BadRequestException('Você não tem permissão para editar esta área');
-      }
-
-      // Usar transação para garantir atomicidade
-      return await this.prisma.$transaction(async (tx) => {
-        // 1. Atualizar Unidade_avaliada
-        const updatedArea = await tx.unidade_avaliada.update({
+        // Atualizar setor hidráulico
+        const updatedSetor = await this.prisma.setor_Hidraulico.update({
           where: { id },
           data: {
-            indentificacao: data.area?.indentificacao || area.indentificacao,
-            area_ha: data.area?.area_ha || area.area_ha,
+            identificacao:
+              data.area?.indentificacao || setorHidraulico.identificacao,
+            fabricante:
+              data.setor_hidraulico?.fabricante || setorHidraulico.fabricante,
+            modelo: data.setor_hidraulico?.modelo || setorHidraulico.modelo,
+            vazao_nominal:
+              data.setor_hidraulico?.vazao_nominal ||
+              setorHidraulico.vazao_nominal,
+            pressao_trabalho:
+              data.setor_hidraulico?.pressao_trabalho ||
+              setorHidraulico.pressao_trabalho,
+            dist_emissores:
+              data.setor_hidraulico?.dist_emissores ||
+              setorHidraulico.dist_emissores,
+            dist_laterais:
+              data.setor_hidraulico?.dist_laterais ||
+              setorHidraulico.dist_laterais,
+            filtro_tipo:
+              data.setor_hidraulico?.filtro_tipo || setorHidraulico.filtro_tipo,
+            malha_filtro:
+              data.setor_hidraulico?.malha_filtro ||
+              setorHidraulico.malha_filtro,
+            valvula_tipo:
+              data.setor_hidraulico?.valvula_tipo ||
+              setorHidraulico.valvula_tipo,
+            energia_tipo:
+              data.setor_hidraulico?.energia_tipo ||
+              setorHidraulico.energia_tipo,
+            condicoes_gerais:
+              data.setor_hidraulico?.condicoes_gerais ||
+              setorHidraulico.condicoes_gerais,
+            freq_manutencao:
+              data.setor_hidraulico?.freq_manutencao ||
+              setorHidraulico.freq_manutencao,
+            data_ultima_manutencao: data.setor_hidraulico
+              ?.data_ultima_manutencao
+              ? new Date(data.setor_hidraulico.data_ultima_manutencao)
+              : setorHidraulico.data_ultima_manutencao,
+            emissor_type:
+              data.setor_hidraulico?.emissor_type ||
+              setorHidraulico.emissor_type,
           },
         });
 
-        // 2. Atualizar Setor Hidráulico (se fornecido)
-        if (data.setor_hidraulico) {
-          // Buscar setor existente
-          const setorExistente = await tx.setor_Hidraulico.findFirst({
-            where: {
-              identificacao: area.indentificacao,
-              propriedadeId: area.propriedade_id,
-            },
-          });
+        return {
+          success: true,
+          message: 'Setor Hidráulico atualizado com sucesso',
+          data: updatedSetor,
+        };
+      }
 
-          if (setorExistente) {
-            await tx.setor_Hidraulico.update({
-              where: { id: setorExistente.id },
-              data: {
-                identificacao: data.area?.indentificacao || area.indentificacao, // Atualiza identificação se mudou
-                fabricante: data.setor_hidraulico.fabricante,
-                modelo: data.setor_hidraulico.modelo,
-                vazao_nominal: data.setor_hidraulico.vazao_nominal,
-                pressao_trabalho: data.setor_hidraulico.pressao_trabalho,
-                dist_emissores: data.setor_hidraulico.dist_emissores,
-                dist_laterais: data.setor_hidraulico.dist_laterais,
-                filtro_tipo: data.setor_hidraulico.filtro_tipo,
-                malha_filtro: data.setor_hidraulico.malha_filtro,
-                valvula_tipo: data.setor_hidraulico.valvula_tipo,
-                energia_tipo: data.setor_hidraulico.energia_tipo,
-                condicoes_gerais: data.setor_hidraulico.condicoes_gerais,
-                freq_manutencao: data.setor_hidraulico.freq_manutencao,
-                data_ultima_manutencao: new Date(data.setor_hidraulico.data_ultima_manutencao),
-                emissor_type: data.setor_hidraulico.emissor_type,
-              },
-            });
-          }
+      // Verificar se é um pivô central
+      const pivoCentral = await this.prisma.pivo_Central.findUnique({
+        where: { id },
+        include: {
+          propriedade: true,
+        },
+      });
+
+      if (pivoCentral) {
+        // Verificar se o usuário é dono da propriedade
+        if (pivoCentral.propriedade.userId !== userId) {
+          throw new BadRequestException(
+            'Você não tem permissão para editar esta área',
+          );
         }
 
-        // 3. Atualizar Pivô Central (se fornecido)
-        if (data.pivo_central) {
-          // Buscar pivô existente
-          const pivoExistente = await tx.pivo_Central.findFirst({
-            where: {
-              identificacao: area.indentificacao,
-              propriedadeId: area.propriedade_id,
-            },
-          });
-
-          if (pivoExistente) {
-            await tx.pivo_Central.update({
-              where: { id: pivoExistente.id },
-              data: {
-                identificacao: data.area?.indentificacao || area.indentificacao, // Atualiza identificação se mudou
-                num_torres: data.pivo_central.num_torres,
-                comprimento: data.pivo_central.comprimento,
-                fabricante: data.pivo_central.fabricante || '',
-                modelo: data.pivo_central.modelo || '',
-                emissor_type: data.pivo_central.emissor_type,
-                energia_tipo: data.pivo_central.energia_tipo,
-                potencia_motor: data.pivo_central.potencia_motor,
-                vazao_operacao: data.pivo_central.vazao_operacao,
-                controle_tipo: data.pivo_central.controle_tipo,
-                fertirrigacao: data.pivo_central.fertirrigacao,
-                fonte_hidrica: data.pivo_central.fonte_hidrica,
-                tempo_funcionamento: data.pivo_central.tempo_funcionamento,
-                velocidade: data.pivo_central.velocidade,
-                bocal_tipo: data.pivo_central.bocal_tipo,
-                pressao_bocal: data.pivo_central.pressao_bocal,
-                data_ultima_manutencao: new Date(data.pivo_central.data_ultima_manutencao),
-                freq_manutencao: data.pivo_central.freq_manutencao,
-                problemas_observados: data.pivo_central.problemas_observados || '',
-                data_ultima_avaliacoes: new Date(data.pivo_central.data_ultima_avaliacoes),
-              },
-            });
-          }
-        }
+        // Atualizar pivô central
+        const updatedPivo = await this.prisma.pivo_Central.update({
+          where: { id },
+          data: {
+            identificacao:
+              data.area?.indentificacao || pivoCentral.identificacao,
+            num_torres: data.pivo_central?.num_torres || pivoCentral.num_torres,
+            comprimento:
+              data.pivo_central?.comprimento || pivoCentral.comprimento,
+            fabricante: data.pivo_central?.fabricante || pivoCentral.fabricante,
+            modelo: data.pivo_central?.modelo || pivoCentral.modelo,
+            emissor_type:
+              data.pivo_central?.emissor_type || pivoCentral.emissor_type,
+            energia_tipo:
+              data.pivo_central?.energia_tipo || pivoCentral.energia_tipo,
+            potencia_motor:
+              data.pivo_central?.potencia_motor || pivoCentral.potencia_motor,
+            vazao_operacao:
+              data.pivo_central?.vazao_operacao || pivoCentral.vazao_operacao,
+            controle_tipo:
+              data.pivo_central?.controle_tipo || pivoCentral.controle_tipo,
+            fertirrigacao:
+              data.pivo_central?.fertirrigacao !== undefined
+                ? data.pivo_central.fertirrigacao
+                : pivoCentral.fertirrigacao,
+            fonte_hidrica:
+              data.pivo_central?.fonte_hidrica || pivoCentral.fonte_hidrica,
+            tempo_funcionamento:
+              data.pivo_central?.tempo_funcionamento ||
+              pivoCentral.tempo_funcionamento,
+            velocidade: data.pivo_central?.velocidade || pivoCentral.velocidade,
+            bocal_tipo: data.pivo_central?.bocal_tipo || pivoCentral.bocal_tipo,
+            pressao_bocal:
+              data.pivo_central?.pressao_bocal || pivoCentral.pressao_bocal,
+            data_ultima_manutencao: data.pivo_central?.data_ultima_manutencao
+              ? new Date(data.pivo_central.data_ultima_manutencao)
+              : pivoCentral.data_ultima_manutencao,
+            freq_manutencao:
+              data.pivo_central?.freq_manutencao || pivoCentral.freq_manutencao,
+            problemas_observados:
+              data.pivo_central?.problemas_observados ||
+              pivoCentral.problemas_observados,
+            data_ultima_avaliacoes: data.pivo_central?.data_ultima_avaliacoes
+              ? new Date(data.pivo_central.data_ultima_avaliacoes)
+              : pivoCentral.data_ultima_avaliacoes,
+          },
+        });
 
         return {
           success: true,
-          message: 'Área atualizada com sucesso',
-          data: updatedArea,
+          message: 'Pivô Central atualizado com sucesso',
+          data: updatedPivo,
         };
-      });
+      }
+
+      throw new BadRequestException('Unidade não encontrada');
     } catch (error) {
       console.error('Erro ao atualizar área:', error);
       if (error instanceof BadRequestException) {
@@ -705,7 +902,12 @@ export class PropertyService {
       const property = await this.prisma.propriedade.findUnique({
         where: { id },
         include: {
-          Unidade_avaliada: {
+          setores_hidraulicos: {
+            include: {
+              avaliacoes: true,
+            },
+          },
+          pivos_centrais: {
             include: {
               avaliacoes: true,
             },
@@ -718,19 +920,29 @@ export class PropertyService {
       }
 
       if (property.userId !== userId) {
-        throw new BadRequestException('Você não tem permissão para excluir esta propriedade');
+        throw new BadRequestException(
+          'Você não tem permissão para excluir esta propriedade',
+        );
       }
 
       // Verificar se há dados dependentes
-      const totalAreas = property.Unidade_avaliada.length;
-      const totalAvaliacoes = property.Unidade_avaliada.reduce(
-        (acc, area) => acc + area.avaliacoes.length,
-        0
-      );
+      const totalSetores = property.setores_hidraulicos.length;
+      const totalPivos = property.pivos_centrais.length;
+      const totalAreas = totalSetores + totalPivos;
+
+      const totalAvaliacoes =
+        property.setores_hidraulicos.reduce(
+          (acc, setor) => acc + setor.avaliacoes.length,
+          0,
+        ) +
+        property.pivos_centrais.reduce(
+          (acc, pivo) => acc + pivo.avaliacoes.length,
+          0,
+        );
 
       if (totalAreas > 0 || totalAvaliacoes > 0) {
         throw new BadRequestException(
-          `Não é possível excluir esta propriedade pois ela possui ${totalAreas} área(s) e ${totalAvaliacoes} avaliação(ões). Exclua-as primeiro.`
+          `Não é possível excluir esta propriedade pois ela possui ${totalAreas} unidade(s) de irrigação e ${totalAvaliacoes} avaliação(ões). Exclua-as primeiro.`,
         );
       }
 
@@ -747,45 +959,83 @@ export class PropertyService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao excluir propriedade: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao excluir propriedade: ' + error.message,
+      );
     }
   }
 
   async deleteArea(id: string, userId: string) {
     try {
-      // Verificar se a área existe
-      const area = await this.prisma.unidade_avaliada.findUnique({
+      // Primeiro, tentar buscar como setor hidráulico
+      const setorHidraulico = await this.prisma.setor_Hidraulico.findUnique({
         where: { id },
         include: {
-          propiedade: true,
+          propriedade: true,
           avaliacoes: true,
         },
       });
 
-      if (!area) {
-        throw new BadRequestException('Área não encontrada');
+      if (setorHidraulico) {
+        // Verificar se o usuário é dono da propriedade
+        if (setorHidraulico.propriedade.userId !== userId) {
+          throw new BadRequestException(
+            'Você não tem permissão para excluir esta área',
+          );
+        }
+
+        // Verificar se há avaliações
+        if (setorHidraulico.avaliacoes.length > 0) {
+          throw new BadRequestException(
+            `Não é possível excluir este setor hidráulico pois ele possui ${setorHidraulico.avaliacoes.length} avaliação(ões). Exclua-as primeiro.`,
+          );
+        }
+
+        await this.prisma.setor_Hidraulico.delete({
+          where: { id },
+        });
+
+        return {
+          success: true,
+          message: 'Setor Hidráulico excluído com sucesso',
+        };
       }
 
-      // Verificar se o usuário é dono da propriedade
-      if (area.propiedade.userId !== userId) {
-        throw new BadRequestException('Você não tem permissão para excluir esta área');
-      }
-
-      // Verificar se há avaliações
-      if (area.avaliacoes.length > 0) {
-        throw new BadRequestException(
-          `Não é possível excluir esta área pois ela possui ${area.avaliacoes.length} avaliação(ões). Exclua-as primeiro.`
-        );
-      }
-
-      await this.prisma.unidade_avaliada.delete({
+      // Se não encontrou como setor hidráulico, tentar como pivô central
+      const pivoCentral = await this.prisma.pivo_Central.findUnique({
         where: { id },
+        include: {
+          propriedade: true,
+          avaliacoes: true,
+        },
       });
 
-      return {
-        success: true,
-        message: 'Área excluída com sucesso',
-      };
+      if (pivoCentral) {
+        // Verificar se o usuário é dono da propriedade
+        if (pivoCentral.propriedade.userId !== userId) {
+          throw new BadRequestException(
+            'Você não tem permissão para excluir esta área',
+          );
+        }
+
+        // Verificar se há avaliações
+        if (pivoCentral.avaliacoes.length > 0) {
+          throw new BadRequestException(
+            `Não é possível excluir este pivô central pois ele possui ${pivoCentral.avaliacoes.length} avaliação(ões). Exclua-as primeiro.`,
+          );
+        }
+
+        await this.prisma.pivo_Central.delete({
+          where: { id },
+        });
+
+        return {
+          success: true,
+          message: 'Pivô Central excluído com sucesso',
+        };
+      }
+
+      throw new BadRequestException('Unidade não encontrada');
     } catch (error) {
       console.error('Erro ao excluir área:', error);
       if (error instanceof BadRequestException) {
@@ -801,9 +1051,14 @@ export class PropertyService {
       const avaliacao = await this.prisma.avaliacao.findUnique({
         where: { id },
         include: {
-          unidade: {
+          setor: {
             include: {
-              propiedade: true,
+              propriedade: true,
+            },
+          },
+          pivo: {
+            include: {
+              propriedade: true,
             },
           },
           Ponto_localizada: true,
@@ -821,8 +1076,17 @@ export class PropertyService {
       }
 
       // Verificar se o usuário é dono da propriedade
-      if (avaliacao.unidade.propiedade.userId !== userId) {
-        throw new BadRequestException('Você não tem permissão para excluir esta avaliação');
+      let propriedadeUserId: string | null = null;
+      if (avaliacao.setor?.propriedade) {
+        propriedadeUserId = avaliacao.setor.propriedade.userId;
+      } else if (avaliacao.pivo?.propriedade) {
+        propriedadeUserId = avaliacao.pivo.propriedade.userId;
+      }
+
+      if (!propriedadeUserId || propriedadeUserId !== userId) {
+        throw new BadRequestException(
+          'Você não tem permissão para excluir esta avaliação',
+        );
       }
 
       // Usar transação para excluir tudo relacionado
@@ -865,7 +1129,9 @@ export class PropertyService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao excluir avaliação: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao excluir avaliação: ' + error.message,
+      );
     }
   }
 }
