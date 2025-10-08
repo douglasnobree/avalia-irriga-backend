@@ -32,10 +32,12 @@ export class CreatePropertyDto {
   estado: string;
 
   @IsNumber()
-  latitude: number;
+  @IsOptional()
+  latitude?: number;
 
   @IsNumber()
-  longitude: number;
+  @IsOptional()
+  longitude?: number;
 
   @IsNumber()
   area_total: number;

@@ -4,21 +4,55 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { CreateAvaliacaoDto } from './dto/create-avaliacao.dto';
 import { PrismaService } from 'src/infra/prisma/prisma.service';
-import { UniformityCalculationsService } from '../common/services/uniformity-calculations.service';
+import { UniformityCalculationsService, GeocodingService } from '../common/services';
 
 @Injectable()
 export class PropertyService {
   constructor(
     private prisma: PrismaService,
     private uniformityCalc: UniformityCalculationsService,
+    private geocodingService: GeocodingService,
   ) {}
 
   async create(data: CreatePropertyDto) {
-    const property = await this.prisma.propriedade.create({
-      // @ts-ignore
-      data,
-    });
-    return property;
+    try {
+      console.log('📍 Dados recebidos para criar propriedade:', JSON.stringify(data, null, 2));
+      
+      // Se latitude e longitude não foram fornecidas, buscar automaticamente
+      let latitude = data.latitude;
+      let longitude = data.longitude;
+
+      if (!latitude || !longitude) {
+        console.log(`🌍 Buscando coordenadas para: ${data.municipio}, ${data.estado}`);
+        const coords = await this.geocodingService.getCoordinatesFromAddress(
+          data.municipio,
+          data.estado,
+        );
+        
+        if (coords) {
+          latitude = coords.latitude;
+          longitude = coords.longitude;
+          console.log(`✅ Coordenadas encontradas: ${latitude}, ${longitude}`);
+        } else {
+          console.log('⚠️ Coordenadas não encontradas, salvando como null');
+        }
+      }
+
+      console.log('💾 Criando propriedade no banco de dados...');
+      const property = await this.prisma.propriedade.create({
+        data: {
+          ...data,
+          latitude,
+          longitude,
+        },
+      });
+      
+      console.log('✅ Propriedade criada com sucesso:', property.id);
+      return property;
+    } catch (error) {
+      console.error('❌ Erro ao criar propriedade:', error);
+      throw error;
+    }
   }
 
   async findAll() {
@@ -462,8 +496,8 @@ export class PropertyService {
             offline_status: dto.offline_status,
             avaliador_id: userId,
             unidade_type: dto.unidade_type,
-            setor_id: dto.setor_id,
-            pivo_id: dto.pivo_id,
+            setor_id: dto.setor_id ?? null,
+            pivo_id: dto.pivo_id ?? null,
           },
         });
 

@@ -67,6 +67,7 @@ export class HydraulicSectorController {
   })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   create(@Body() createHydraulicSectorDto: CreateHydraulicSectorDto) {
+    console.log('🎯 Controller recebeu dados:', JSON.stringify(createHydraulicSectorDto, null, 2));
     return this.hydraulicSectorService.create({
       ...createHydraulicSectorDto,
     });

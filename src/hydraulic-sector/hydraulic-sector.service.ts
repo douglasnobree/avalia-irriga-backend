@@ -19,11 +19,20 @@ export class HydraulicSectorService {
   }
 
   async create(data: CreateHydraulicSectorDto) {
-    const hydraulicSector = await this.prisma.setor_Hidraulico.create({
-      // @ts-ignore
-      data,
-    });
-    return hydraulicSector;
+    try {
+      console.log('🔧 Dados recebidos para criar setor hidráulico:', JSON.stringify(data, null, 2));
+      
+      const hydraulicSector = await this.prisma.setor_Hidraulico.create({
+        // @ts-ignore
+        data,
+      });
+      
+      console.log('✅ Setor hidráulico criado com sucesso:', hydraulicSector.id);
+      return hydraulicSector;
+    } catch (error) {
+      console.error('❌ Erro ao criar setor hidráulico:', error);
+      throw error;
+    }
   }
 
   async findAll() {
@@ -51,6 +60,7 @@ export class HydraulicSectorService {
 
     return this.prisma.setor_Hidraulico.update({
       where: { id },
+      // @ts-ignore
       data: updateHydraulicSectorDto,
     });
   }

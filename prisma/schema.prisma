@@ -34,8 +34,8 @@ model Propriedade {
   email               String
   municipio           String
   estado              String
-  latitude            Float
-  longitude           Float
+  latitude            Float?
+  longitude           Float?
   area_total          Float
   area_irrigada       Float
   observacoes         String?
@@ -239,7 +239,7 @@ enum UnitType {
 }
 
 enum EmissorType {
-  MICROMICROASPERSOR
+  MICROASPERSOR
   GOTEJAMENTO
 }
 

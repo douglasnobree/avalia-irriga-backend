@@ -2,18 +2,17 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsDate,
   IsEnum,
-  isNotEmpty,
   IsNotEmpty,
   IsNumber,
   IsPositive,
-  isString,
   IsString,
+  IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 // Enumeração para tipo de emissor, corresponde ao model do Prisma
 export enum EmissorType {
-  MICROMICROASPERSOR = 'MICROMICROASPERSOR',
+  MICROASPERSOR = 'MICROASPERSOR',
   GOTEJAMENTO = 'GOTEJAMENTO',
 }
 
@@ -46,16 +45,15 @@ export class CreateHydraulicSectorDto {
     example: UnitModel.SETOR_HIDRAULICO,
   })
   @IsNotEmpty({ message: 'O tipo do setor é obrigatório' })
-  @IsEnum(UnitModel, {
-    message: 'O tipo do setor deve ser SETOR_HIDRAULICO ou PIVO_CENTRAL',
-  })
-  tipo_setor: UnitModel;
+  @IsString({ message: 'O tipo do setor deve ser uma string' })
+  tipo_setor: string;
 
   @ApiProperty({
     description: 'Nome do fabricante do setor hidráulico',
     example: 'Irrigação Tech',
     required: false,
   })
+  @IsOptional()
   @IsString({ message: 'O fabricante deve ser uma string' })
   fabricante?: string;
 
@@ -64,6 +62,7 @@ export class CreateHydraulicSectorDto {
     example: 'Modelo XYZ-2000',
     required: false,
   })
+  @IsOptional()
   @IsString({ message: 'O modelo deve ser uma string' })
   modelo?: string;
 
@@ -140,6 +139,7 @@ export class CreateHydraulicSectorDto {
     example: 'Boas condições',
     required: false,
   })
+  @IsOptional()
   @IsString({ message: 'As condições gerais devem ser uma string' })
   condicoes_gerais?: string;
 
