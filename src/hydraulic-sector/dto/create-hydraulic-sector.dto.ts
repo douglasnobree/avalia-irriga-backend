@@ -167,7 +167,7 @@ export class CreateHydraulicSectorDto {
   })
   @IsNotEmpty({ message: 'O tipo de emissor é obrigatório' })
   @IsEnum(EmissorType, {
-    message: 'O tipo de emissor deve ser MICROMICROASPERSOR ou GOTEJAMENTO',
+    message: 'O tipo de emissor deve ser MICROASPERSOR ou GOTEJAMENTO',
   })
   emissor_type: EmissorType;
 }

@@ -170,4 +170,62 @@ export class AreasService {
       };
     }
   }
+
+  async findOne(areaId: string) {
+    // Primeiro tenta buscar como setor hidráulico
+    const setor = await this.prisma.setor_Hidraulico.findUnique({
+      where: { id: areaId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        propriedade: true,
+        avaliacoes: {
+          orderBy: {
+            data: 'desc',
+          },
+        },
+      },
+    });
+
+    if (setor) {
+      return {
+        type: 'SETOR_HIDRAULICO',
+        ...setor,
+      };
+    }
+
+    // Se não encontrar, tenta buscar como pivô central
+    const pivo = await this.prisma.pivo_Central.findUnique({
+      where: { id: areaId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        propriedade: true,
+        avaliacoes: {
+          orderBy: {
+            data: 'desc',
+          },
+        },
+      },
+    });
+
+    if (pivo) {
+      return {
+        type: 'PIVO_CENTRAL',
+        ...pivo,
+      };
+    }
+
+    throw new NotFoundException(`Área com ID ${areaId} não encontrada`);
+  }
 }
