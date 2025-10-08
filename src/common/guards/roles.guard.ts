@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { UserRole } from '@prisma/client';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
@@ -29,8 +30,8 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    // Obtém a requisição do contexto HTTP
-    const request = context.switchToHttp().getRequest();
+    // Obtém a requisição do contexto (suporta HTTP e GraphQL)
+    const request = this.getRequestFromContext(context);
 
     // Obtém a sessão que foi anexada pelo AuthGuard
     const session = request.session;
@@ -74,5 +75,19 @@ export class RolesGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  /**
+   * Extrai o objeto de requisição do contexto de execução
+   * Suporta tanto HTTP quanto GraphQL
+   */
+  private getRequestFromContext(context: ExecutionContext) {
+    const contextType = context.getType<'http' | 'graphql'>();
+
+    if (contextType === 'graphql') {
+      return GqlExecutionContext.create(context).getContext().req;
+    }
+
+    return context.switchToHttp().getRequest();
   }
 }
